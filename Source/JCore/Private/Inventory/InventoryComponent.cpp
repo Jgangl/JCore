@@ -178,7 +178,7 @@ void UInventoryComponent::ServerAddItem_Implementation(UItemDataAsset* ItemToAdd
 {
     if (!ItemToAdd)
     {
-        UE_LOG(LogTemp, Error, TEXT("ServerAddItem: ItemToAdd was null"))
+        UE_LOG(LogTemp, Error, TEXT("ServerAddItem: ItemToAdd was nullptr"))
         return;
     }
 
