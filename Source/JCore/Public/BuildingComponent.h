@@ -140,12 +140,6 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
     bool bInBuildMode;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    UPowerNodeComponent* CurrentlySelectedPowerNode;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    APowerCable* PreviewBuildingCable;
-
     UPROPERTY(Replicated)
     ABuildable* BuildableHoveringToDelete;
 

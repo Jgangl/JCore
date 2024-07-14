@@ -273,11 +273,6 @@ void UBuildingComponent::CancelBuilding()
 
         this->CurrentBuildingPreviewClass = nullptr;
     }
-
-    if (this->CurrentlySelectedPowerNode)
-    {
-        this->CurrentlySelectedPowerNode = nullptr;
-    }
 }
 
 bool UBuildingComponent::TryBuild()
