@@ -1,0 +1,168 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "Net/UnrealNetwork.h"
+
+#include "BuildingPreview.h"
+
+#include "BuildingComponent.generated.h"
+
+class ABuildable;
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCompletedBuilding, AActor*, Building);
+
+DECLARE_LOG_CATEGORY_CLASS(LogBuildingComponent, Log, All)
+
+/**
+ *
+ */
+UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
+class JCORE_API UBuildingComponent : public UActorComponent
+{
+    GENERATED_BODY()
+
+public:
+    UBuildingComponent();
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType,
+                               FActorComponentTickFunction* ThisTickFunction) override;
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool IsTryingToPlaceBuilding() const;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool IsInDeleteMode() const;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool IsInBuildMode() const;
+
+    UPROPERTY(BlueprintReadWrite, Replicated)
+    float TargetLocationRepFrequency;
+
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerCancelBuilding();
+
+    UFUNCTION(Server, Unreliable, BlueprintCallable)
+    void ServerRotateBuildObject(bool bClockwise);
+
+    UFUNCTION(BlueprintCallable)
+    void RotateBuildObject(bool bClockwise);
+
+    UFUNCTION(BlueprintCallable)
+    void SetDeleteMode(bool InDeleteMode);
+
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerSetDeleteMode(bool InDeleteMode);
+
+    UFUNCTION(BlueprintCallable)
+    void SetBuildMode(bool InBuildMode);
+
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerSetBuildableHoveringToDelete(ABuildable* NewBuildable);
+
+    UFUNCTION(BlueprintCallable)
+    AActor* GetPreviouslyCompletedBuilding();
+
+    UPROPERTY(BlueprintAssignable)
+    FOnCompletedBuilding OnCompletedBuilding;
+
+    UPROPERTY(EditAnywhere)
+    TSubclassOf<AActor> ActorClassToSpawn;
+
+    UPROPERTY(EditAnywhere)
+    float GridTileSizeX;
+
+    UPROPERTY(EditAnywhere)
+    float GridTileSizeY;
+
+    UPROPERTY(EditAnywhere)
+    float GridTileSizeZ;
+
+    UPROPERTY(EditAnywhere)
+    float GridOffsetX;
+
+    UPROPERTY(EditAnywhere)
+    float GridOffsetY;
+
+    UPROPERTY(EditAnywhere)
+    float GridOffsetZ;
+
+    UPROPERTY(EditAnywhere)
+    bool bDebug;
+
+    // TODO: ADD A SETTING FOR WHETHER OR NOT TO USE OVERLAPS TO CHECK FOR PLACEMENT VALIDITY (WE DON'T NEED OVERLAPS WHEN USING GRID)
+
+private:
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ShowBuildGhost(TSubclassOf<AActor> ActorToPreview);
+
+    UFUNCTION(BlueprintCallable)
+    void CancelBuilding();
+
+    UFUNCTION(BlueprintCallable)
+    bool TryBuild();
+
+    UFUNCTION(BlueprintCallable)
+    bool TryDelete();
+
+    float TargetLocationRepTimer;
+
+    TArray<UMeshComponent*> GetMeshComponents(TSubclassOf<AActor> TargetActor);
+
+protected:
+    UFUNCTION(Server, Unreliable)
+    void ServerSetTargetTransform(const FTransform& TargetTransform);
+
+    UPROPERTY(BlueprintReadOnly)
+    FTransform ClientTargetTransform;
+
+    UPROPERTY(BlueprintReadOnly, Replicated)
+    FTransform ServerTargetTransform;
+
+    UPROPERTY(BlueprintReadOnly)
+    TSubclassOf<AActor> CurrentBuildingPreviewClass;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+    ABuildingPreview* CurrentBuildingPreview;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+    UMaterialInterface* ValidPreviewMaterial;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+    UMaterialInterface* InvalidPreviewMaterial;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float RoatationGridSnapValue;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+    bool bInDeleteMode;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
+    bool bInBuildMode;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    UPowerNodeComponent* CurrentlySelectedPowerNode;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    APowerCable* PreviewBuildingCable;
+
+    UPROPERTY(Replicated)
+    ABuildable* BuildableHoveringToDelete;
+
+    UPROPERTY()
+    AActor* LocalHoveringBuildableActor;
+
+    UPROPERTY()
+    AActor* PreviouslyCompletedBuilding;
+
+private:
+    void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
+
+    const FVector GetClosestGridLocationToCursor() const;
+
+    const FVector GetGridLocation(const FVector& InLocation) const;
+
+    void HandleDeleteMode(TArray<FHitResult>& OutHits);
+
+    void HandleBuildingPreview(TArray<FHitResult>& OutHits);
+};
