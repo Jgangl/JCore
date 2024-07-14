@@ -41,6 +41,14 @@ private:
     GENERATED_BODY()
 
 protected:
+    void SetMaterial(UMaterialInterface* NewMaterial);
+
+    UFUNCTION()
+    void OnRep_bPlacementValid();
+
+    UFUNCTION()
+    void OnRep_StaticMeshComponents();
+
     UPROPERTY()
     AActor* CurrentPreviewActor;
 
@@ -53,16 +61,8 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_bPlacementValid)
     bool bPlacementValid;
 
-    UFUNCTION()
-    void OnRep_bPlacementValid();
-
-    UFUNCTION()
-    void OnRep_StaticMeshComponents();
-
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_StaticMeshComponents)
     TArray<UStaticMeshComponent*> StaticMeshComponents;
-
-    void SetMaterial(UMaterialInterface* NewMaterial);
 
     /** Used as a root component to be able to offset static mesh components */
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
