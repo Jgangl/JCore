@@ -23,8 +23,10 @@ class JCORE_API UBuildingComponent : public UActorComponent
 
 public:
     UBuildingComponent();
+
     virtual void TickComponent(float DeltaTime, ELevelTick TickType,
                                FActorComponentTickFunction* ThisTickFunction) override;
+
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -40,7 +42,7 @@ public:
     void ServerCancelBuilding();
 
     UFUNCTION(Server, Unreliable, BlueprintCallable)
-    void ServerRotateBuildObject(bool bClockwise);
+    void ServerRotateBuildObject(const FRotator &DeltaRotation);
 
     UFUNCTION(BlueprintCallable)
     void RotateBuildObject(bool bClockwise);
@@ -57,11 +59,29 @@ public:
     UFUNCTION(Server, Reliable, BlueprintCallable)
     void ServerSetBuildableHoveringToDelete(ABuildable* NewBuildable);
 
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerStartBuilding(TSubclassOf<AActor> ActorToBuild);
+
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerStartBuildPreview(TSubclassOf<AActor> ActorToPreview);
+
+    UFUNCTION(BlueprintCallable)
+    void ClearBuildingPreview();
+
+    UFUNCTION(BlueprintCallable)
+    bool TryBuild();
+
+    UFUNCTION(BlueprintCallable)
+    bool TryDelete();
+
     UFUNCTION(BlueprintCallable)
     AActor* GetPreviouslyCompletedBuilding();
 
     UFUNCTION(BlueprintCallable)
     void IncrementSelectedActorToSpawn();
+
+    UFUNCTION(BlueprintCallable)
+    void SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn);
 
     UPROPERTY(BlueprintAssignable)
     FOnCompletedBuilding OnCompletedBuilding;
@@ -99,28 +119,19 @@ public:
     UPROPERTY(BlueprintReadWrite, Replicated)
     float TargetLocationRepFrequency;
 
+    UPROPERTY(EditAnywhere)
+    bool bFirstPersonInteraction;
+
     // TODO: ADD A SETTING FOR WHETHER OR NOT TO USE OVERLAPS TO CHECK FOR PLACEMENT VALIDITY (WE DON'T NEED OVERLAPS WHEN USING GRID)
 
 private:
-    UFUNCTION(Server, Reliable, BlueprintCallable)
-    void ShowBuildGhost(TSubclassOf<AActor> ActorToPreview);
-
-    UFUNCTION(BlueprintCallable)
-    void ClearBuildingPreview();
-
-    UFUNCTION(BlueprintCallable)
-    bool TryBuild();
-
-    UFUNCTION(BlueprintCallable)
-    bool TryDelete();
-
     float TargetLocationRepTimer;
 
     TArray<UMeshComponent*> GetMeshComponents(TSubclassOf<AActor> TargetActor);
 
 protected:
     UFUNCTION(Server, Unreliable)
-    void ServerSetTargetTransform(const FTransform& TargetTransform);\
+    void ServerSetTargetTransform(const FTransform& TargetTransform);
 
     virtual void HandleDeleteMode(TArray<FHitResult>& OutHits);
 
@@ -133,7 +144,7 @@ protected:
     FTransform ServerTargetTransform;
 
     UPROPERTY(BlueprintReadOnly)
-    TSubclassOf<AActor> CurrentBuildingPreviewClass;
+    TSubclassOf<AActor> CurrentBuildingClassInPreview;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
     ABuildingPreview* CurrentBuildingPreview;
@@ -145,7 +156,7 @@ protected:
     UMaterialInterface* InvalidPreviewMaterial;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    float RoatationGridSnapValue;
+    float RotationGridSnapValue;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
     bool bInDeleteMode;
@@ -164,6 +175,8 @@ protected:
 
 private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
+
+    void GetFirstPersonHitResults(TArray<FHitResult>& OutHits) const;
 
     const FVector GetClosestGridLocationToCursor() const;
 

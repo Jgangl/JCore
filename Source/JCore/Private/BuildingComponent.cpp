@@ -12,7 +12,7 @@ UBuildingComponent::UBuildingComponent()
 {
     this->PrimaryComponentTick.bCanEverTick = true;
 
-    this->RoatationGridSnapValue = 10.0f;
+    this->RotationGridSnapValue  = 10.0f;
     this->bInDeleteMode          = false;
     this->bInBuildMode           = false;
 
@@ -25,6 +25,8 @@ UBuildingComponent::UBuildingComponent()
     this->GridOffsetZ = 0.0f;
 
     this->bDebug = true;
+
+    this->bFirstPersonInteraction = true;
 
     this->SetIsReplicatedByDefault(true);
 }
@@ -63,7 +65,15 @@ void UBuildingComponent::TickComponent(float DeltaTime,
     }
 
     TArray<FHitResult> OutHits;
-    this->GetHitResultsUnderCursor(OutHits);
+
+    if (this->bFirstPersonInteraction)
+    {
+        this->GetFirstPersonHitResults(OutHits);
+    }
+    else
+    {
+        this->GetHitResultsUnderCursor(OutHits);
+    }
 
     if (OutHits.Num() == 0)
     {
@@ -118,9 +128,18 @@ void UBuildingComponent::ServerCancelBuilding_Implementation()
     this->ClearBuildingPreview();
 }
 
-// THIS SHOULD BE RENAMED TO START PREVIEW BUILD
-void UBuildingComponent::ShowBuildGhost_Implementation(TSubclassOf<AActor> ActorClassToPreview)
+void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
 {
+    if (!ActorClassToPreview)
+    {
+        if (this->ActorClassesToSpawn.Num() == 0)
+        {
+            return;
+        }
+
+        ActorClassToPreview = this->ActorClassesToSpawn[0];
+    }
+
     AActor* ActorToPreview = ActorClassToPreview.GetDefaultObject();
 
     if (!ActorToPreview)
@@ -128,6 +147,8 @@ void UBuildingComponent::ShowBuildGhost_Implementation(TSubclassOf<AActor> Actor
         UE_LOG(LogBuildingComponent, Error, TEXT("ActorToPreview null"))
         return;
     }
+
+    this->ActorClassToSpawn = ActorClassToPreview;
 
     TArray<UMeshComponent*> MeshComponents = this->GetMeshComponents(ActorClassToPreview);
 
@@ -159,7 +180,7 @@ void UBuildingComponent::ShowBuildGhost_Implementation(TSubclassOf<AActor> Actor
     BuildingPreview->SetValidPreviewMaterial(this->ValidPreviewMaterial);
     BuildingPreview->SetInvalidPreviewMaterial(this->InvalidPreviewMaterial);
 
-    this->CurrentBuildingPreviewClass = ActorClassToPreview;
+    this->CurrentBuildingClassInPreview = ActorClassToPreview;
     this->CurrentBuildingPreview = BuildingPreview;
 
     if (!this->CurrentBuildingPreview)
@@ -182,22 +203,23 @@ void UBuildingComponent::ShowBuildGhost_Implementation(TSubclassOf<AActor> Actor
     }
 }
 
-void UBuildingComponent::ServerRotateBuildObject_Implementation(bool bClockwise)
+void UBuildingComponent::ServerRotateBuildObject_Implementation(const FRotator &DeltaRotation)
 {
-    if (!this->CurrentBuildingPreview) return;
+    if (!this->CurrentBuildingPreview)
+        return;
 
-    const FRotator DeltaRotation = bClockwise
-                                       ? FRotator(0.0f, this->RoatationGridSnapValue, 0.0f)
-                                       : FRotator(0.0f, -this->RoatationGridSnapValue, 0.0f);
+    FRotator NewRotation    = this->ServerTargetTransform.Rotator() + DeltaRotation;
+    FTransform NewTransform = this->ServerTargetTransform;
+    NewTransform.SetRotation(NewRotation.Quaternion());
 
-    this->CurrentBuildingPreview->AddActorLocalRotation(DeltaRotation);
+    this->ServerSetTargetTransform(NewTransform);
 }
 
 void UBuildingComponent::RotateBuildObject(bool bClockwise)
 {
     const FRotator DeltaRotation = bClockwise
-                                       ? FRotator(0.0f, this->RoatationGridSnapValue, 0.0f)
-                                       : FRotator(0.0f, -this->RoatationGridSnapValue, 0.0f);
+                                       ? FRotator(0.0f, this->RotationGridSnapValue, 0.0f)
+                                       : FRotator(0.0f, -this->RotationGridSnapValue, 0.0f);
 
     this->ClientTargetTransform.SetRotation((this->ClientTargetTransform.GetRotation().Rotator() + DeltaRotation).Quaternion());
 }
@@ -246,6 +268,13 @@ void UBuildingComponent::SetBuildMode(bool InBuildMode)
     }
 }
 
+void UBuildingComponent::ServerStartBuilding_Implementation(TSubclassOf<AActor> ActorToBuild)
+{
+    this->SetBuildMode(true);
+
+    this->ServerStartBuildPreview(ActorToBuild);
+}
+
 AActor* UBuildingComponent::GetPreviouslyCompletedBuilding()
 {
     return this->PreviouslyCompletedBuilding;
@@ -273,6 +302,11 @@ void UBuildingComponent::IncrementSelectedActorToSpawn()
     this->ActorClassToSpawn = this->ActorClassesToSpawn[this->SelectedActorToSpawnIndex];
 }
 
+void UBuildingComponent::SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn)
+{
+    this->ActorClassToSpawn = InActorClassToSpawn;
+}
+
 void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuildable* NewBuildable)
 {
     if (this->BuildableHoveringToDelete != NewBuildable)
@@ -293,7 +327,7 @@ void UBuildingComponent::ClearBuildingPreview()
         this->CurrentBuildingPreview->Destroy();
         this->CurrentBuildingPreview = nullptr;
 
-        this->CurrentBuildingPreviewClass = nullptr;
+        this->CurrentBuildingClassInPreview = nullptr;
     }
 }
 
@@ -323,7 +357,7 @@ bool UBuildingComponent::TryBuild()
         this->CurrentBuildingPreview->Destroy();
         this->CurrentBuildingPreview = nullptr;
 
-        this->CurrentBuildingPreviewClass = nullptr;
+        this->CurrentBuildingClassInPreview = nullptr;
     }
 
     this->OnCompletedBuilding.Broadcast(SpawnedActor);
@@ -424,7 +458,7 @@ void UBuildingComponent::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) c
     PlayerController->DeprojectMousePositionToWorld(MouseLocation, MouseRotation);
 
     float Distance = 5000.0f;
-    FVector End = MouseLocation + MouseRotation * Distance;
+    FVector End    = MouseLocation + MouseRotation * Distance;
 
     TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
 
@@ -434,6 +468,38 @@ void UBuildingComponent::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) c
     UKismetSystemLibrary::LineTraceMulti(
         GetWorld(),
         MouseLocation,
+        End,
+        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel2),
+        false,
+        ActorsToIgnore,
+        EDrawDebugTrace::None,
+        OutHits,
+        true);
+}
+
+void UBuildingComponent::GetFirstPersonHitResults(TArray<FHitResult>& OutHits) const
+{
+    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (!PlayerController || !PlayerController->PlayerCameraManager)
+    {
+        return;
+    }
+
+    FVector CameraLocation = PlayerController->PlayerCameraManager->GetCameraLocation();
+    FVector CameraDirection = PlayerController->PlayerCameraManager->GetCameraRotation().Vector();
+
+    float Distance = 5000.0f;
+    FVector Start  = CameraLocation;
+    FVector End    = Start + (CameraDirection * Distance);
+
+    TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
+
+    // TODO: Try to only hit landscape or other building objects?
+
+    // TODO: Do a sphere trace instead of line trace to more accurately hit objects
+    UKismetSystemLibrary::LineTraceMulti(
+        GetWorld(),
+        Start,
         End,
         UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel2),
         false,
