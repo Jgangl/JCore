@@ -36,9 +36,6 @@ public:
     UFUNCTION(BlueprintCallable, BlueprintPure)
     bool IsInBuildMode() const;
 
-    UPROPERTY(BlueprintReadWrite, Replicated)
-    float TargetLocationRepFrequency;
-
     UFUNCTION(Server, Reliable, BlueprintCallable)
     void ServerCancelBuilding();
 
@@ -63,11 +60,20 @@ public:
     UFUNCTION(BlueprintCallable)
     AActor* GetPreviouslyCompletedBuilding();
 
+    UFUNCTION(BlueprintCallable)
+    void IncrementSelectedActorToSpawn();
+
     UPROPERTY(BlueprintAssignable)
     FOnCompletedBuilding OnCompletedBuilding;
 
-    UPROPERTY(EditAnywhere)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TArray<TSubclassOf<AActor>> ActorClassesToSpawn;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TSubclassOf<AActor> ActorClassToSpawn;
+
+    UPROPERTY(VisibleAnywhere)
+    uint32 SelectedActorToSpawnIndex;
 
     UPROPERTY(EditAnywhere)
     float GridTileSizeX;
@@ -90,6 +96,9 @@ public:
     UPROPERTY(EditAnywhere)
     bool bDebug;
 
+    UPROPERTY(BlueprintReadWrite, Replicated)
+    float TargetLocationRepFrequency;
+
     // TODO: ADD A SETTING FOR WHETHER OR NOT TO USE OVERLAPS TO CHECK FOR PLACEMENT VALIDITY (WE DON'T NEED OVERLAPS WHEN USING GRID)
 
 private:
@@ -97,7 +106,7 @@ private:
     void ShowBuildGhost(TSubclassOf<AActor> ActorToPreview);
 
     UFUNCTION(BlueprintCallable)
-    void CancelBuilding();
+    void ClearBuildingPreview();
 
     UFUNCTION(BlueprintCallable)
     bool TryBuild();
@@ -111,7 +120,11 @@ private:
 
 protected:
     UFUNCTION(Server, Unreliable)
-    void ServerSetTargetTransform(const FTransform& TargetTransform);
+    void ServerSetTargetTransform(const FTransform& TargetTransform);\
+
+    virtual void HandleDeleteMode(TArray<FHitResult>& OutHits);
+
+    virtual void HandleBuildingPreview(TArray<FHitResult>& OutHits);
 
     UPROPERTY(BlueprintReadOnly)
     FTransform ClientTargetTransform;
@@ -155,8 +168,4 @@ private:
     const FVector GetClosestGridLocationToCursor() const;
 
     const FVector GetGridLocation(const FVector& InLocation) const;
-
-    void HandleDeleteMode(TArray<FHitResult>& OutHits);
-
-    void HandleBuildingPreview(TArray<FHitResult>& OutHits);
 };

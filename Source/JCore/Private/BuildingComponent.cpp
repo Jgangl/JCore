@@ -115,7 +115,7 @@ bool UBuildingComponent::IsInBuildMode() const
 
 void UBuildingComponent::ServerCancelBuilding_Implementation()
 {
-    this->CancelBuilding();
+    this->ClearBuildingPreview();
 }
 
 // THIS SHOULD BE RENAMED TO START PREVIEW BUILD
@@ -210,7 +210,7 @@ void UBuildingComponent::SetDeleteMode(bool InDeleteMode)
 
         if (this->bInDeleteMode)
         {
-            this->CancelBuilding();
+            this->ClearBuildingPreview();
         }
         else
         {
@@ -251,6 +251,28 @@ AActor* UBuildingComponent::GetPreviouslyCompletedBuilding()
     return this->PreviouslyCompletedBuilding;
 }
 
+void UBuildingComponent::IncrementSelectedActorToSpawn()
+{
+    if (!this->ActorClassesToSpawn.IsValidIndex(this->SelectedActorToSpawnIndex))
+    {
+        UE_LOG(LogBuildingComponent, Error, TEXT("IncrementSelectedActorToSpawn: SelectedActorToSpawnIndex (%d) is invalid"), this->SelectedActorToSpawnIndex)
+        return;
+    }
+
+    UE_LOG(LogBuildingComponent, Warning, TEXT("SelectedActorToSpawnIndex: %d"), this->SelectedActorToSpawnIndex);
+    UE_LOG(LogBuildingComponent, Warning, TEXT("Num: %d"), this->ActorClassesToSpawn.Num());
+
+    this->SelectedActorToSpawnIndex++;
+
+    // Wrap
+    if (this->SelectedActorToSpawnIndex == this->ActorClassesToSpawn.Num())
+    {
+        this->SelectedActorToSpawnIndex = 0;
+    }
+
+    this->ActorClassToSpawn = this->ActorClassesToSpawn[this->SelectedActorToSpawnIndex];
+}
+
 void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuildable* NewBuildable)
 {
     if (this->BuildableHoveringToDelete != NewBuildable)
@@ -264,7 +286,7 @@ void UBuildingComponent::ServerSetDeleteMode_Implementation(bool InDeleteMode)
     this->SetDeleteMode(InDeleteMode);
 }
 
-void UBuildingComponent::CancelBuilding()
+void UBuildingComponent::ClearBuildingPreview()
 {
     if (this->CurrentBuildingPreview)
     {
@@ -279,7 +301,7 @@ bool UBuildingComponent::TryBuild()
 {
     if (!this->CurrentBuildingPreview)
     {
-        UE_LOG(LogBuildingComponent, Error, TEXT("CurrentBuildingPreview null"))
+        UE_LOG(LogBuildingComponent, Warning, TEXT("CurrentBuildingPreview null"))
         return false;
     }
 
@@ -404,7 +426,7 @@ void UBuildingComponent::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) c
     float Distance = 5000.0f;
     FVector End = MouseLocation + MouseRotation * Distance;
 
-    TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), CurrentBuildingPreview};
+    TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
 
     // TODO: Try to only hit landscape or other building objects?
 
