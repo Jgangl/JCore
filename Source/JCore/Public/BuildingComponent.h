@@ -127,8 +127,6 @@ public:
 private:
     float TargetLocationRepTimer;
 
-    TArray<UMeshComponent*> GetMeshComponents(TSubclassOf<AActor> TargetActor);
-
 protected:
     UFUNCTION(Server, Unreliable)
     void ServerSetTargetTransform(const FTransform& TargetTransform);
@@ -157,6 +155,9 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float RotationGridSnapValue;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    float BuildingPreviewInterpSpeed;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
     bool bInDeleteMode;

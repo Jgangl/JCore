@@ -3,6 +3,7 @@
 
 #include "BuildingPreview.h"
 
+#include "Engine/SCS_Node.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -126,6 +127,46 @@ void ABuildingPreview::OnRep_StaticMeshComponents()
     this->OnRep_bPlacementValid();
 }
 
+void ABuildingPreview::UpdateMesh(TSubclassOf<AActor> BuildingClass)
+{
+    TArray<UMeshComponent*> CurrentMeshComponents;
+
+    this->GetComponents(UMeshComponent::StaticClass(), CurrentMeshComponents);
+
+    // Remove current mesh components if there are any
+    for (UMeshComponent* MeshComponent : CurrentMeshComponents)
+    {
+        if (!MeshComponent)
+        {
+            continue;
+        }
+
+        UE_LOG(LogTemp, Warning, TEXT("Remove mesh component"));
+
+        MeshComponent->DestroyComponent();
+    }
+
+    this->StaticMeshComponents.Empty();
+
+    UE_LOG(LogTemp, Warning, TEXT("Adding meshes from : %s"), *BuildingClass->GetName());
+
+    TArray<UMeshComponent*> MeshComponents = this->GetMeshComponents(BuildingClass);
+
+    // Add new mesh components
+    for (UMeshComponent* MeshComponent : MeshComponents)
+    {
+        if (!MeshComponent)
+        {
+            continue;
+        }
+
+        if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent))
+        {
+            this->AddStaticMesh(StaticMeshComponent);
+        }
+    }
+}
+
 void ABuildingPreview::SetMaterial(UMaterialInterface* NewMaterial)
 {
     if (!NewMaterial)
@@ -165,4 +206,63 @@ void ABuildingPreview::SetValidPreviewMaterial(UMaterialInterface* NewValidPrevi
 void ABuildingPreview::SetInvalidPreviewMaterial(UMaterialInterface* NewInvalidPreviewMaterial)
 {
     this->InvalidPreviewMaterial = NewInvalidPreviewMaterial;
+}
+
+// THIS SHOULD BE MOVED TO AN EXTERNAL FILE
+TArray<UMeshComponent*> ABuildingPreview::GetMeshComponents(TSubclassOf<AActor> TargetActorClass)
+{
+    TArray<UMeshComponent*> MeshComponents;
+
+    if (!IsValid(TargetActorClass))
+    {
+        return MeshComponents;
+    }
+
+    // Check CDO.
+    AActor* ActorCDO = TargetActorClass->GetDefaultObject<AActor>();
+
+    TArray<UObject*> DefaultObjectSubobjects;
+    ActorCDO->GetDefaultSubobjects(DefaultObjectSubobjects);
+
+    // Search for ActorComponents created from C++
+    for (UObject* DefaultSubObject : DefaultObjectSubobjects)
+    {
+        if (DefaultSubObject->IsA(UStaticMeshComponent::StaticClass()))
+        {
+            MeshComponents.AddUnique(Cast<UMeshComponent>(DefaultSubObject));
+        }
+    }
+
+    // Check blueprint nodes. Components added in blueprint editor only (and not in code) are not available from
+    // CDO.
+    UBlueprintGeneratedClass* RootBlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(TargetActorClass);
+    UClass* ActorClass = TargetActorClass;
+
+    // Go down the inheritance tree to find nodes that were added to parent blueprints of our blueprint graph.
+    do
+    {
+        UBlueprintGeneratedClass* ActorBlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(ActorClass);
+        if (!ActorBlueprintGeneratedClass)
+        {
+            return MeshComponents;
+        }
+
+        const TArray<USCS_Node*>& ActorBlueprintNodes =
+            ActorBlueprintGeneratedClass->SimpleConstructionScript->GetAllNodes();
+
+        for (USCS_Node* Node : ActorBlueprintNodes)
+        {
+            //UE_LOG(LogBuildingComponent, Error, TEXT("  %s", *Node->GetActualComponentTemplate(ActorBlueprintGeneratedClass)->GetName())
+            if (Node->ComponentClass->IsChildOf(UMeshComponent::StaticClass()))
+            {
+                MeshComponents.AddUnique(
+                    Cast<UMeshComponent>(Node->GetActualComponentTemplate(RootBlueprintGeneratedClass)));
+            }
+        }
+
+        ActorClass = Cast<UClass>(ActorClass->GetSuperStruct());
+    }
+    while (ActorClass != AActor::StaticClass());
+
+    return MeshComponents;
 }

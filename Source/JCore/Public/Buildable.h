@@ -6,14 +6,7 @@
 
 #include "Buildable.generated.h"
 
-UENUM()
-enum class ETargetSnapSlot
-{
-    Floor,
-    Wall
-};
-
-UCLASS()
+UCLASS(Abstract, Blueprintable)
 class JCORE_API ABuildable : public AActor
 {
     GENERATED_BODY()
@@ -28,9 +21,6 @@ public:
     UFUNCTION(BlueprintCallable)
     void ResetMaterial();
 
-    UFUNCTION(BlueprintCallable)
-    ETargetSnapSlot GetTargetSnapSlot();
-
 protected:
     virtual void BeginPlay() override;
 
@@ -39,7 +29,4 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TArray<UMaterialInterface*> OriginalMaterials;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    ETargetSnapSlot TargetSnapSlot;
 };

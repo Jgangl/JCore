@@ -37,11 +37,16 @@ public:
     UFUNCTION(BlueprintCallable)
     FORCEINLINE bool IsPlacementValid() { return this->bPlacementValid; }
 
+    UFUNCTION(BlueprintCallable)
+    void UpdateMesh(TSubclassOf<AActor> BuildingClass);
+
 private:
     GENERATED_BODY()
 
 protected:
     void SetMaterial(UMaterialInterface* NewMaterial);
+
+    TArray<UMeshComponent*> GetMeshComponents(TSubclassOf<AActor> TargetActor);
 
     UFUNCTION()
     void OnRep_bPlacementValid();

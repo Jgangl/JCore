@@ -57,8 +57,3 @@ void ABuildable::ResetMaterial()
         StaticMeshComponent->SetMaterial(0, OriginalMaterial);
     }
 }
-
-ETargetSnapSlot ABuildable::GetTargetSnapSlot()
-{
-    return this->TargetSnapSlot;
-}

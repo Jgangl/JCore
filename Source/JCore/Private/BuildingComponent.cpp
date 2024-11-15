@@ -4,7 +4,7 @@
 #include "BuildingComponent.h"
 
 #include "Buildable.h"
-#include "Engine/SCS_Node.h"
+#include "BuildableInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -12,9 +12,10 @@ UBuildingComponent::UBuildingComponent()
 {
     this->PrimaryComponentTick.bCanEverTick = true;
 
-    this->RotationGridSnapValue  = 10.0f;
-    this->bInDeleteMode          = false;
-    this->bInBuildMode           = false;
+    this->RotationGridSnapValue      = 10.0f;
+    this->BuildingPreviewInterpSpeed = 25.0f;
+    this->bInDeleteMode              = false;
+    this->bInBuildMode               = false;
 
     this->GridTileSizeX = 100.0f;
     this->GridTileSizeY = 100.0f;
@@ -42,7 +43,7 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         FVector LerpedLocation = FMath::VInterpTo(this->CurrentBuildingPreview->GetActorLocation(),
                                  this->ServerTargetTransform.GetLocation(),
                                  DeltaTime,
-                                 15.0f);
+                                 this->BuildingPreviewInterpSpeed);
 
         this->CurrentBuildingPreview->SetActorLocation(LerpedLocation);
         if (!this->CurrentBuildingPreview->GetActorRotation().Equals(this->ServerTargetTransform.GetRotation().Rotator(), 1.0f))
@@ -51,7 +52,6 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         }
     }
 
-
     APawn* OwningPawn = Cast<APawn>(GetOwner());
 
     if (!OwningPawn || !OwningPawn->IsLocallyControlled())
@@ -59,7 +59,7 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         return;
     }
 
-    if (!this->bInBuildMode)
+    if (!this->bInBuildMode && !this->bInDeleteMode)
     {
         return;
     }
@@ -125,6 +125,7 @@ bool UBuildingComponent::IsInBuildMode() const
 
 void UBuildingComponent::ServerCancelBuilding_Implementation()
 {
+    this->SetBuildMode(false);
     this->ClearBuildingPreview();
 }
 
@@ -149,8 +150,6 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
     }
 
     this->ActorClassToSpawn = ActorClassToPreview;
-
-    TArray<UMeshComponent*> MeshComponents = this->GetMeshComponents(ActorClassToPreview);
 
     AActor* Player = this->GetOwner();
 
@@ -189,18 +188,7 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
         return;
     }
 
-    for (UMeshComponent* MeshComponent : MeshComponents)
-    {
-        if (!MeshComponent)
-        {
-            continue;
-        }
-
-        if (UStaticMeshComponent* StaticMeshComponent = Cast<UStaticMeshComponent>(MeshComponent))
-        {
-            CurrentBuildingPreview->AddStaticMesh(StaticMeshComponent);
-        }
-    }
+    this->CurrentBuildingPreview->UpdateMesh(this->CurrentBuildingClassInPreview);
 }
 
 void UBuildingComponent::ServerRotateBuildObject_Implementation(const FRotator &DeltaRotation)
@@ -232,10 +220,13 @@ void UBuildingComponent::SetDeleteMode(bool InDeleteMode)
 
         if (this->bInDeleteMode)
         {
-            this->ClearBuildingPreview();
+            UE_LOG(LogTemp, Verbose, TEXT("Enter Delete Mode"));
+            this->ServerCancelBuilding();
         }
         else
         {
+            UE_LOG(LogTemp, Verbose, TEXT("Exit Delete Mode"));
+
             if (this->LocalHoveringBuildableActor)
             {
                 ABuildable* PreviousHoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor);
@@ -260,8 +251,8 @@ void UBuildingComponent::SetBuildMode(bool InBuildMode)
     {
         this->bInBuildMode = InBuildMode;
 
-        // Exit delete mode when exiting build mode
-        if (!this->bInBuildMode)
+        // Exit delete mode when entering build mode
+        if (this->bInBuildMode)
         {
             this->SetDeleteMode(false);
         }
@@ -288,9 +279,6 @@ void UBuildingComponent::IncrementSelectedActorToSpawn()
         return;
     }
 
-    UE_LOG(LogBuildingComponent, Warning, TEXT("SelectedActorToSpawnIndex: %d"), this->SelectedActorToSpawnIndex);
-    UE_LOG(LogBuildingComponent, Warning, TEXT("Num: %d"), this->ActorClassesToSpawn.Num());
-
     this->SelectedActorToSpawnIndex++;
 
     // Wrap
@@ -305,6 +293,16 @@ void UBuildingComponent::IncrementSelectedActorToSpawn()
 void UBuildingComponent::SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn)
 {
     this->ActorClassToSpawn = InActorClassToSpawn;
+
+    if (this->IsTryingToPlaceBuilding())
+    {
+        this->CurrentBuildingClassInPreview = this->ActorClassToSpawn;
+    }
+
+    if (this->CurrentBuildingPreview)
+    {
+        this->CurrentBuildingPreview->UpdateMesh(this->CurrentBuildingClassInPreview);
+    }
 }
 
 void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuildable* NewBuildable)
@@ -335,7 +333,7 @@ bool UBuildingComponent::TryBuild()
 {
     if (!this->CurrentBuildingPreview)
     {
-        UE_LOG(LogBuildingComponent, Warning, TEXT("CurrentBuildingPreview null"))
+        UE_LOG(LogBuildingComponent, Verbose, TEXT("TryBuild : CurrentBuildingPreview null"))
         return false;
     }
 
@@ -351,16 +349,13 @@ bool UBuildingComponent::TryBuild()
     AActor* SpawnedActor = GetWorld()->SpawnActor(this->ActorClassToSpawn,
                                                   &this->ServerTargetTransform);
 
-    // Cleanup preview actor
-    if (this->CurrentBuildingPreview)
-    {
-        this->CurrentBuildingPreview->Destroy();
-        this->CurrentBuildingPreview = nullptr;
-
-        this->CurrentBuildingClassInPreview = nullptr;
-    }
-
     this->OnCompletedBuilding.Broadcast(SpawnedActor);
+
+    // Notify the buildable that it is finished building
+    if (IBuildableInterface* BuildableInterface = Cast<IBuildableInterface>(SpawnedActor))
+    {
+        BuildableInterface->CompleteBuilding();
+    }
 
     this->PreviouslyCompletedBuilding = SpawnedActor;
 
@@ -369,7 +364,7 @@ bool UBuildingComponent::TryBuild()
 
 bool UBuildingComponent::TryDelete()
 {
-    if (!BuildableHoveringToDelete)
+    if (!this->BuildableHoveringToDelete)
     {
         return false;
     }
@@ -378,65 +373,6 @@ bool UBuildingComponent::TryDelete()
     this->BuildableHoveringToDelete = nullptr;
 
     return true;
-}
-
-// THIS SHOULD BE MOVED TO AN EXTERNAL FILE
-TArray<UMeshComponent*> UBuildingComponent::GetMeshComponents(TSubclassOf<AActor> TargetActorClass)
-{
-    TArray<UMeshComponent*> MeshComponents;
-
-    if (!IsValid(TargetActorClass))
-    {
-        return MeshComponents;
-    }
-
-    // Check CDO.
-    AActor* ActorCDO = TargetActorClass->GetDefaultObject<AActor>();
-
-    TArray<UObject*> DefaultObjectSubobjects;
-    ActorCDO->GetDefaultSubobjects(DefaultObjectSubobjects);
-
-    // Search for ActorComponents created from C++
-    for (UObject* DefaultSubObject : DefaultObjectSubobjects)
-    {
-        if (DefaultSubObject->IsA(UStaticMeshComponent::StaticClass()))
-        {
-            MeshComponents.AddUnique(Cast<UMeshComponent>(DefaultSubObject));
-        }
-    }
-
-    // Check blueprint nodes. Components added in blueprint editor only (and not in code) are not available from
-    // CDO.
-    UBlueprintGeneratedClass* RootBlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(TargetActorClass);
-    UClass* ActorClass = TargetActorClass;
-
-    // Go down the inheritance tree to find nodes that were added to parent blueprints of our blueprint graph.
-    do
-    {
-        UBlueprintGeneratedClass* ActorBlueprintGeneratedClass = Cast<UBlueprintGeneratedClass>(ActorClass);
-        if (!ActorBlueprintGeneratedClass)
-        {
-            return MeshComponents;
-        }
-
-        const TArray<USCS_Node*>& ActorBlueprintNodes =
-            ActorBlueprintGeneratedClass->SimpleConstructionScript->GetAllNodes();
-
-        for (USCS_Node* Node : ActorBlueprintNodes)
-        {
-            //UE_LOG(LogBuildingComponent, Error, TEXT("  %s", *Node->GetActualComponentTemplate(ActorBlueprintGeneratedClass)->GetName())
-            if (Node->ComponentClass->IsChildOf(UMeshComponent::StaticClass()))
-            {
-                MeshComponents.AddUnique(
-                    Cast<UMeshComponent>(Node->GetActualComponentTemplate(RootBlueprintGeneratedClass)));
-            }
-        }
-
-        ActorClass = Cast<UClass>(ActorClass->GetSuperStruct());
-    }
-    while (ActorClass != AActor::StaticClass());
-
-    return MeshComponents;
 }
 
 void UBuildingComponent::ServerSetTargetTransform_Implementation(const FTransform& TargetTransform)
@@ -491,16 +427,18 @@ void UBuildingComponent::GetFirstPersonHitResults(TArray<FHitResult>& OutHits) c
     float Distance = 5000.0f;
     FVector Start  = CameraLocation;
     FVector End    = Start + (CameraDirection * Distance);
+    float Radius   = 10.0f;
 
     TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
 
     // TODO: Try to only hit landscape or other building objects?
 
     // TODO: Do a sphere trace instead of line trace to more accurately hit objects
-    UKismetSystemLibrary::LineTraceMulti(
+    UKismetSystemLibrary::SphereTraceMulti(
         GetWorld(),
         Start,
         End,
+        Radius,
         UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel2),
         false,
         ActorsToIgnore,
@@ -549,46 +487,54 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
     FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), GridLocation, FVector::One());
 
-    ETargetSnapSlot TargetSnapSlot = ETargetSnapSlot::Floor;
-
-    // TODO: FIX this
-    FString TargetNameContainsString;
-    if (TargetSnapSlot == ETargetSnapSlot::Floor)
-    {
-        // Only look for walls
-        TargetNameContainsString = TEXT("Floor");
-    }
-    else
-    {
-        TargetNameContainsString = TEXT("Wall");
-    }
-
     bool bSnapping = false;
+    FVector ClosestSnapLocation = FVector::Zero();
 
-    // TODO: Get best hit result that is closest to cursor?
+    // TODO: Get best hit result that is closest to snap location?
 
     FHitResult TargetHitResult = OutHits[0];
     for (const FHitResult& HitResult : OutHits)
     {
-        bool bHitBuildable = HitResult.GetActor() && HitResult.GetActor()->IsA(ABuildable::StaticClass());
-        if (!bHitBuildable)
+        IBuildableInterface* BuildableInterface = Cast<IBuildableInterface>(HitResult.GetActor());
+
+        if (!BuildableInterface)
         {
             continue;
         }
 
-        if (HitResult.Component.IsValid() && HitResult.Component->GetName().Contains(TargetNameContainsString))
+        TArray<FVector> PipeSnapLocations;
+
+        BuildableInterface->GetPipeSnapLocations(PipeSnapLocations);
+
+        float ClosestSnapLocationDistance = 10000000.0f;
+
+        // Get closest snap location
+        for (const FVector SnapLocation : PipeSnapLocations)
         {
-            bSnapping = true;
-            TargetHitResult = HitResult;
-            break;
+            if (this->bDebug)
+            {
+                //DrawDebugSphere(GetWorld(), SnapLocation, 20.0f, 8, FColor::Black, false);
+            }
+
+            float Distance = FVector::Distance(HitLocation, SnapLocation);
+
+            if (Distance < ClosestSnapLocationDistance)
+            {
+                ClosestSnapLocation         = SnapLocation;
+                ClosestSnapLocationDistance = Distance;
+            }
         }
+
+        bSnapping = true;
+        TargetHitResult = HitResult;
+        break;
     }
 
     if (bSnapping)
     {
-        HitLocation = TargetHitResult.Component->GetComponentLocation();
-        TargetTransform.SetLocation(HitLocation);
-        TargetTransform.SetRotation(TargetHitResult.Component->GetComponentRotation().Quaternion());
+        //HitLocation = TargetHitResult.Component->GetComponentLocation();
+        TargetTransform.SetLocation(ClosestSnapLocation);
+        //TargetTransform.SetRotation(TargetHitResult.Component->GetComponentRotation().Quaternion());
 
         if (!TargetTransform.Equals(this->ClientTargetTransform, 0.01f))
         {
@@ -625,6 +571,7 @@ void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)
         // Reduce casting
         if (this->LocalHoveringBuildableActor != ActorDirectlyHit)
         {
+            // Reset previous buildable's material
             if (this->LocalHoveringBuildableActor)
             {
                 ABuildable* PreviousHoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor);
@@ -634,6 +581,7 @@ void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)
                 }
             }
 
+            UE_LOG(LogTemp, Verbose, TEXT("HandleDeleteMode: Set hovering actor to: %s"), *ActorDirectlyHit->GetName());
             this->LocalHoveringBuildableActor = ActorDirectlyHit;
 
             ABuildable* HoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor);
