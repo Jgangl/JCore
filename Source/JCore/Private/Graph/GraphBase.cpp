@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GraphBase.h"
+#include "Graph/GraphBase.h"
 
 UGraphBase::UGraphBase()
 {
@@ -89,5 +89,24 @@ void UGraphBase::RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode)
 int32 UGraphBase::GetNumNodes()
 {
     return this->Nodes.Num();
+}
+
+int32 UGraphBase::GetNumEdges()
+{
+    int32 NumEdges = 0;
+
+    for (UNodeBase* Node : this->Nodes)
+    {
+        if (!Node) continue;
+
+        NumEdges += Node->GetAdjacencyList().Num();
+    }
+
+    return NumEdges;
+}
+
+TArray<UNodeBase*> UGraphBase::GetNodes()
+{
+    return this->Nodes;
 }
 

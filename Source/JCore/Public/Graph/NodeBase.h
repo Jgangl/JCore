@@ -23,9 +23,18 @@ public:
     UFUNCTION(BlueprintCallable)
     TArray<UNodeBase*> GetAdjacencyList();
 
+    UFUNCTION(BlueprintCallable)
+    void SetLocation(const FVector &InLocation);
+
+    UFUNCTION(BlueprintCallable)
+    const FVector& GetLocation() const;
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TArray<UNodeBase*> AdjacencyList;
 
     int32 MaxConnections;
+
+    UPROPERTY()
+    FVector Location;
 };

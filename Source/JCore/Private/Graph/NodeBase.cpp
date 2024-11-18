@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "NodeBase.h"
+#include "Graph/NodeBase.h"
 
 UNodeBase::UNodeBase()
 {
@@ -49,4 +49,14 @@ void UNodeBase::RemoveEdge(UNodeBase* FromNode)
 TArray<UNodeBase*> UNodeBase::GetAdjacencyList()
 {
     return this->AdjacencyList;
+}
+
+void UNodeBase::SetLocation(const FVector &InLocation)
+{
+    this->Location = InLocation;
+}
+
+const FVector& UNodeBase::GetLocation() const
+{
+    return this->Location;
 }

@@ -25,7 +25,7 @@ UBuildingComponent::UBuildingComponent()
     this->GridOffsetY = 50.0f;
     this->GridOffsetZ = 0.0f;
 
-    this->bDebug = true;
+    this->bDebug = false;
 
     this->bFirstPersonInteraction = true;
 

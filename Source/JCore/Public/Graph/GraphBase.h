@@ -29,6 +29,13 @@ public:
     UFUNCTION(BlueprintCallable)
     int32 GetNumNodes();
 
+    UFUNCTION(BlueprintCallable)
+    int32 GetNumEdges();
+
+    UFUNCTION(BlueprintCallable)
+    TArray<UNodeBase*> GetNodes();
+
+protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TArray<UNodeBase*> Nodes;
 
