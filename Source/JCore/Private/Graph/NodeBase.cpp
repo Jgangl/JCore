@@ -60,3 +60,8 @@ const FVector& UNodeBase::GetLocation() const
 {
     return this->Location;
 }
+
+void UNodeBase::PostEdgesAdded()
+{
+
+}

@@ -21,7 +21,12 @@ public:
     UFUNCTION(BlueprintCallable)
     UNodeBase* GetNode() const;
 
+    void SetNodeClass(TSubclassOf<UNodeBase> InNodeClass);
+
 protected:
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     UNodeBase* Node;
+
+    UPROPERTY(VisibleAnywhere, Transient)
+    TSubclassOf<UNodeBase> NodeClass;
 };

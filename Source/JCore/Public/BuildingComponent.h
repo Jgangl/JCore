@@ -83,6 +83,8 @@ public:
     UFUNCTION(BlueprintCallable)
     void SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn);
 
+    void AddCurrentBuildableOffset(FVector& InLocation) const;
+
     UPROPERTY(BlueprintAssignable)
     FOnCompletedBuilding OnCompletedBuilding;
 

@@ -164,7 +164,9 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
         this->CurrentBuildingPreview->Destroy();
     }
 
-    const FVector& GridCursorLocation = this->GetClosestGridLocationToCursor();
+    FVector GridCursorLocation = this->GetClosestGridLocationToCursor();
+
+    this->AddCurrentBuildableOffset(GridCursorLocation);
 
     const FTransform SpawnTransform(FQuat::Identity, GridCursorLocation, FVector::One());
 
@@ -305,6 +307,14 @@ void UBuildingComponent::SetActorClassToSpawn(TSubclassOf<AActor> InActorClassTo
     }
 }
 
+void UBuildingComponent::AddCurrentBuildableOffset(FVector& InLocation) const
+{
+    if (ABuildable* Buildable = Cast<ABuildable>(this->ActorClassToSpawn->GetDefaultObject()))
+    {
+        InLocation += Buildable->GetBuildingOffset();
+    }
+}
+
 void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuildable* NewBuildable)
 {
     if (this->BuildableHoveringToDelete != NewBuildable)
@@ -405,7 +415,7 @@ void UBuildingComponent::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) c
         GetWorld(),
         MouseLocation,
         End,
-        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel2),
+        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility),
         false,
         ActorsToIgnore,
         EDrawDebugTrace::None,
@@ -439,7 +449,7 @@ void UBuildingComponent::GetFirstPersonHitResults(TArray<FHitResult>& OutHits) c
         Start,
         End,
         Radius,
-        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel2),
+        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility),
         false,
         ActorsToIgnore,
         EDrawDebugTrace::None,
@@ -479,6 +489,8 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
     }
 
     FVector GridLocation = this->GetGridLocation(HitLocation);
+
+    this->AddCurrentBuildableOffset(GridLocation);
 
     if (this->bDebug)
     {

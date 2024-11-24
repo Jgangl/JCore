@@ -1,59 +1,187 @@
 
 #include "Buildable.h"
 
+#include "Graph/GraphNodeComponent.h"
+#include "Graph/GraphSubsystem.h"
+#include "Kismet/GameplayStatics.h"
+#include "SteamFactory/PipeConnectionComponent.h"
+
 ABuildable::ABuildable()
 {
     PrimaryActorTick.bCanEverTick = true;
-
     this->bReplicates = true;
+
+    this->StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh Component"));
+    this->SetRootComponent(this->StaticMeshComponent);
+
+    this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Block);
 }
 
 void ABuildable::BeginPlay()
 {
     Super::BeginPlay();
 
-    this->GetComponents(this->StaticMeshComponents);
+    this->GetComponents(this->MeshComponents);
 
-    for (UStaticMeshComponent* StaticMeshComponent : StaticMeshComponents)
+    for (UMeshComponent* MeshComponent : MeshComponents)
     {
-        if (StaticMeshComponent)
+        if (MeshComponent)
         {
-            OriginalMaterials.Add(StaticMeshComponent->GetMaterial(0));
+            this->OriginalMaterials.Add(MeshComponent->GetMaterial(0));
 
-            StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
-                                                               ECollisionResponse::ECR_Block);
+            MeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
+                                                         ECollisionResponse::ECR_Block);
         }
     }
 }
 
-void ABuildable::Tick(float DeltaTime)
+void ABuildable::Destroyed()
 {
-    Super::Tick(DeltaTime);
+    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    {
+        if (!PipeConnectionComponent) continue;
+
+        PipeConnectionComponent->DisconnectConnections();
+    }
+
+    this->RemoveGraphNode();
+
+    Super::Destroyed();
+}
+
+bool ABuildable::RemoveGraphNode()
+{
+    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
+
+    if (!GameInstance)
+    {
+        return false;
+    }
+
+    UGraphSubsystem* GraphSubsystem = GameInstance->GetSubsystem<UGraphSubsystem>();
+
+    if (!GraphSubsystem)
+    {
+        return false;
+    }
+
+    UGraphBase* Graph = GraphSubsystem->GetGraph();
+
+    if (!Graph)
+    {
+        return false;
+    }
+
+    UGraphNodeComponent* GraphNodeComponent = Cast<UGraphNodeComponent>(this->GetComponentByClass(UGraphNodeComponent::StaticClass()));
+
+    if (!GraphNodeComponent)
+    {
+        return false;
+    }
+
+    Graph->RemoveNode(GraphNodeComponent->GetNode());
+
+    return true;
+}
+
+void ABuildable::OnConstruction(const FTransform& Transform)
+{
+    Super::OnConstruction(Transform);
+
+    GetComponents<UPipeConnectionComponent>(this->PipeConnectionComponents, true);
+
+    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    {
+        if (!PipeConnectionComponent)
+        {
+            UE_LOG(LogBuildable, Error, TEXT("OnConstruction: PipeConnectionComponent is null"))
+            return;
+        }
+
+        //PipeConnectionComponent->OnConnected.AddDynamic(this, &ABuildable::OnConnectionConnected);
+        //PipeConnectionComponent->OnDisconnected.AddDynamic(this, &ABuildable::OnConnectionDisconnected);
+    }
 }
 
 void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
 {
     if (!NewMaterial)
     {
-        UE_LOG(LogTemp, Error, TEXT("NewMaterial null"))
+        UE_LOG(LogBuildable, Error, TEXT("NewMaterial null"))
         return;
     }
 
-    for (UStaticMeshComponent* StaticMeshComponent : this->StaticMeshComponents)
+    for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
-        if (!StaticMeshComponent) continue;
+        if (!MeshComponent) continue;
 
-        StaticMeshComponent->SetMaterial(0, NewMaterial);
+        MeshComponent->SetMaterial(0, NewMaterial);
     }
 }
 
 void ABuildable::ResetMaterial()
 {
-    for (int i = 0; i < StaticMeshComponents.Num(); i++)
+    for (int i = 0; i < this->MeshComponents.Num(); i++)
     {
-        UStaticMeshComponent* StaticMeshComponent = StaticMeshComponents[i];
+        UMeshComponent* MeshComponent = this->MeshComponents[i];
         UMaterialInterface* OriginalMaterial = OriginalMaterials[i];
 
-        StaticMeshComponent->SetMaterial(0, OriginalMaterial);
+        MeshComponent->SetMaterial(0, OriginalMaterial);
+    }
+}
+
+const FVector& ABuildable::GetBuildingOffset() const
+{
+    return this->BuildingOffset;
+}
+
+void ABuildable::CompleteBuilding()
+{
+    TArray<UNodeBase*> OutNeighborNodes;
+
+    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    {
+        if (!PipeConnectionComponent) continue;
+
+        PipeConnectionComponent->UpdateConnections(OutNeighborNodes);
+    }
+
+    UGraphNodeComponent* GraphNodeComponent = Cast<UGraphNodeComponent>(this->GetComponentByClass(UGraphNodeComponent::StaticClass()));
+
+    if (!GraphNodeComponent)
+    {
+        return;
+    }
+
+    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
+
+    if (!GameInstance)
+    {
+        return;
+    }
+
+    UGraphSubsystem* GraphSubsystem = GameInstance->GetSubsystem<UGraphSubsystem>();
+
+    if (!GraphSubsystem)
+    {
+        return;
+    }
+
+    if (UGraphBase* Graph = GraphSubsystem->GetGraph())
+    {
+        Graph->AddNodeWithEdges(GraphNodeComponent->GetNode(), OutNeighborNodes);
+    }
+}
+
+void ABuildable::GetPipeSnapLocations(TArray<FVector>& OutSnapLocations) const
+{
+    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    {
+        if (!PipeConnectionComponent) continue;
+
+        if (!PipeConnectionComponent->IsConnected())
+        {
+            OutSnapLocations.Add(PipeConnectionComponent->GetPipeSnapLocation());
+        }
     }
 }

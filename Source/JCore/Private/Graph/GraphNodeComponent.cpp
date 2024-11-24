@@ -3,14 +3,14 @@
 #include "Graph/GraphNodeComponent.h"
 
 #include "Graph/GraphSubsystem.h"
-#include "Kismet/GameplayStatics.h"
 
 UGraphNodeComponent::UGraphNodeComponent()
 {
-    PrimaryComponentTick.bCanEverTick = true;
+    this->PrimaryComponentTick.bCanEverTick = true;
     this->SetIsReplicatedByDefault(true);
 
-    this->Node = nullptr;
+    this->Node      = nullptr;
+    this->NodeClass = UNodeBase::StaticClass();
 }
 
 void UGraphNodeComponent::BeginPlay()
@@ -25,30 +25,16 @@ void UGraphNodeComponent::BeginPlay()
         return;
     }
 
-    this->Node = NewObject<UNodeBase>(this);
+    this->Node = NewObject<UNodeBase>(this, this->NodeClass);
     this->Node->SetLocation(Owner->GetActorLocation());
-
-    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
-
-    if (!GameInstance)
-    {
-        return;
-    }
-
-    UGraphSubsystem* GraphSubsystem = GameInstance->GetSubsystem<UGraphSubsystem>();
-
-    if (!GraphSubsystem)
-    {
-        return;
-    }
-
-    if (UGraphBase* Graph = GraphSubsystem->GetGraph())
-    {
-        Graph->AddNode(this->Node);
-    }
 }
 
 UNodeBase* UGraphNodeComponent::GetNode() const
 {
     return this->Node;
+}
+
+void UGraphNodeComponent::SetNodeClass(TSubclassOf<UNodeBase> InNodeClass)
+{
+    this->NodeClass = InNodeClass;
 }

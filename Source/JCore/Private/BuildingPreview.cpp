@@ -39,13 +39,15 @@ void ABuildingPreview::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 void ABuildingPreview::UpdatePlacementValid()
 {
+    bool LocalPlacementValid = true;
+
     TArray<UPrimitiveComponent*> OverlappingComponents;
     this->GetOverlappingComponents(OverlappingComponents);
 
-    bool LocalPlacementValid = true;
-
     for (UPrimitiveComponent* OverlappingComponent : OverlappingComponents)
     {
+        if (!OverlappingComponent || OverlappingComponent->GetOwner() == this) continue;
+
         if (OverlappingComponent->IsA(UStaticMeshComponent::StaticClass()))
         {
             LocalPlacementValid = false;
@@ -120,6 +122,7 @@ void ABuildingPreview::OnRep_StaticMeshComponents()
         if (!StaticMeshComponent) continue;
 
         StaticMeshComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Overlap);
+        StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECollisionResponse::ECR_Ignore);
         StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
     }
 
@@ -141,14 +144,10 @@ void ABuildingPreview::UpdateMesh(TSubclassOf<AActor> BuildingClass)
             continue;
         }
 
-        UE_LOG(LogTemp, Warning, TEXT("Remove mesh component"));
-
         MeshComponent->DestroyComponent();
     }
 
     this->StaticMeshComponents.Empty();
-
-    UE_LOG(LogTemp, Warning, TEXT("Adding meshes from : %s"), *BuildingClass->GetName());
 
     TArray<UMeshComponent*> MeshComponents = this->GetMeshComponents(BuildingClass);
 

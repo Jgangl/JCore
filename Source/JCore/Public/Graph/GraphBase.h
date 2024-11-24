@@ -6,6 +6,9 @@
 
 #include "GraphBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNodeAdded, UNodeBase*, AddedNode);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnNodeRemoved, UNodeBase*, RemovedNode);
+
 UCLASS(BlueprintType)
 class JCORE_API UGraphBase : public UObject
 {
@@ -15,10 +18,13 @@ public:
     UGraphBase();
 
     UFUNCTION(BlueprintCallable)
-    UNodeBase* AddNode(UNodeBase* NewNode);
+    virtual UNodeBase* AddNode(UNodeBase* NewNode);
 
     UFUNCTION(BlueprintCallable)
-    bool RemoveNode(UNodeBase* NodeToRemove);
+    virtual UNodeBase* AddNodeWithEdges(UNodeBase* NewNode, const TArray<UNodeBase*> &NeighborNodes);
+
+    UFUNCTION(BlueprintCallable)
+    virtual bool RemoveNode(UNodeBase* NodeToRemove);
 
     UFUNCTION(BlueprintCallable)
     void AddEdge(UNodeBase* FromNode, UNodeBase* ToNode);
@@ -34,6 +40,15 @@ public:
 
     UFUNCTION(BlueprintCallable)
     TArray<UNodeBase*> GetNodes();
+
+    UFUNCTION(BlueprintCallable)
+    bool BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode);
+
+    UPROPERTY(BlueprintAssignable)
+    FOnNodeAdded OnNodeAdded;
+
+    UPROPERTY(BlueprintAssignable)
+    FOnNodeRemoved OnNodeRemoved;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

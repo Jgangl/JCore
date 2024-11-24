@@ -27,7 +27,7 @@ public class JCore : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "Engine",
+                "Core", "Engine", "SteamFactory",
                 // ... add other public dependencies that you statically link with here ...
             }
         );
@@ -40,6 +40,7 @@ public class JCore : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
+                "SteamFactory",
                 // ... add private dependencies that you statically link with here ...
             }
         );

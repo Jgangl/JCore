@@ -29,6 +29,9 @@ public:
     UFUNCTION(BlueprintCallable)
     const FVector& GetLocation() const;
 
+    UFUNCTION()
+    virtual void PostEdgesAdded();
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TArray<UNodeBase*> AdjacencyList;
