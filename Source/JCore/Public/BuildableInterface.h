@@ -21,5 +21,5 @@ class JCORE_API IBuildableInterface
     /** Called by the BuildingComponent when this buildable is finished building */
     virtual void CompleteBuilding() = 0;
 
-    virtual void GetPipeSnapLocations(TArray<FVector>& OutSnapLocations) const = 0;
+    virtual void GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) const = 0;
 };

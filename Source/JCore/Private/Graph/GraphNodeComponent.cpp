@@ -26,7 +26,6 @@ void UGraphNodeComponent::BeginPlay()
     }
 
     this->Node = NewObject<UNodeBase>(this, this->NodeClass);
-    this->Node->SetLocation(Owner->GetActorLocation());
 }
 
 UNodeBase* UGraphNodeComponent::GetNode() const
@@ -37,4 +36,15 @@ UNodeBase* UGraphNodeComponent::GetNode() const
 void UGraphNodeComponent::SetNodeClass(TSubclassOf<UNodeBase> InNodeClass)
 {
     this->NodeClass = InNodeClass;
+}
+
+void UGraphNodeComponent::SetNodeLocation(const FVector& InLocation)
+{
+    if (!this->Node)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : Node is nullptr"), __FUNCTION__);
+        return;
+    }
+
+    this->Node->SetLocation(InLocation);
 }

@@ -14,25 +14,44 @@ ABuildable::ABuildable()
     this->StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh Component"));
     this->SetRootComponent(this->StaticMeshComponent);
 
+    this->bIsPreviewing = false;
+
     this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Block);
+
+    const FString ValidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_ValidBuildingPreview.M_ValidBuildingPreview'");
+    const FString InvalidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_InvalidBuildingPreview.M_InvalidBuildingPreview'");
+
+    static ConstructorHelpers::FObjectFinder<UMaterial> ValidMaterialFinder(*ValidMaterialPath);
+
+    if (!ValidMaterialFinder.Succeeded())
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : Path invalid: %s"), __FUNCTION__, *ValidMaterialPath);
+    }
+
+    this->ValidPreviewMaterial = ValidMaterialFinder.Object;
+
+    static ConstructorHelpers::FObjectFinder<UMaterial> InvalidMaterialFinder(*InvalidMaterialPath);
+
+    if (!InvalidMaterialFinder.Succeeded())
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : Path invalid: %s"), __FUNCTION__, *InvalidMaterialPath);
+    }
+
+    this->InvalidPreviewMaterial = InvalidMaterialFinder.Object;
+}
+
+void ABuildable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+    Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+    DOREPLIFETIME(ABuildable, bIsPreviewing);
+    DOREPLIFETIME_CONDITION(ABuildable, ValidPreviewMaterial, COND_InitialOnly);
+    DOREPLIFETIME_CONDITION(ABuildable, InvalidPreviewMaterial, COND_InitialOnly);
 }
 
 void ABuildable::BeginPlay()
 {
     Super::BeginPlay();
-
-    this->GetComponents(this->MeshComponents);
-
-    for (UMeshComponent* MeshComponent : MeshComponents)
-    {
-        if (MeshComponent)
-        {
-            this->OriginalMaterials.Add(MeshComponent->GetMaterial(0));
-
-            MeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
-                                                         ECollisionResponse::ECR_Block);
-        }
-    }
 }
 
 void ABuildable::Destroyed()
@@ -84,6 +103,25 @@ bool ABuildable::RemoveGraphNode()
     return true;
 }
 
+void ABuildable::UpdatePreviewing()
+{
+    if (this->bIsPreviewing)
+    {
+        this->SetCollisionProfileName(FName(TEXT("BuildablePreview")));
+        this->SetMaterial(this->ValidPreviewMaterial);
+    }
+    else
+    {
+        this->SetCollisionProfileName(FName(TEXT("Buildable")));
+        this->ResetMaterial();
+    }
+}
+
+void ABuildable::OnRep_IsPreviewing()
+{
+    this->UpdatePreviewing();
+}
+
 void ABuildable::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
@@ -100,6 +138,19 @@ void ABuildable::OnConstruction(const FTransform& Transform)
 
         //PipeConnectionComponent->OnConnected.AddDynamic(this, &ABuildable::OnConnectionConnected);
         //PipeConnectionComponent->OnDisconnected.AddDynamic(this, &ABuildable::OnConnectionDisconnected);
+    }
+
+    GetComponents(this->MeshComponents);
+
+    for (UMeshComponent* MeshComponent : this->MeshComponents)
+    {
+        if (MeshComponent)
+        {
+            this->OriginalMaterials.Add(MeshComponent->GetMaterial(0));
+
+            MeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
+                                                         ECollisionResponse::ECR_Block);
+        }
     }
 }
 
@@ -119,12 +170,17 @@ void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
     }
 }
 
+void ABuildable::SetMaterialInvalid()
+{
+    this->SetMaterial(this->InvalidPreviewMaterial);
+}
+
 void ABuildable::ResetMaterial()
 {
     for (int i = 0; i < this->MeshComponents.Num(); i++)
     {
         UMeshComponent* MeshComponent = this->MeshComponents[i];
-        UMaterialInterface* OriginalMaterial = OriginalMaterials[i];
+        UMaterialInterface* OriginalMaterial = this->OriginalMaterials[i];
 
         MeshComponent->SetMaterial(0, OriginalMaterial);
     }
@@ -137,6 +193,8 @@ const FVector& ABuildable::GetBuildingOffset() const
 
 void ABuildable::CompleteBuilding()
 {
+    this->SetIsPreviewing(false);
+
     TArray<UNodeBase*> OutNeighborNodes;
 
     for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
@@ -152,6 +210,8 @@ void ABuildable::CompleteBuilding()
     {
         return;
     }
+
+    GraphNodeComponent->SetNodeLocation(this->GetActorLocation());
 
     UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
 
@@ -173,7 +233,7 @@ void ABuildable::CompleteBuilding()
     }
 }
 
-void ABuildable::GetPipeSnapLocations(TArray<FVector>& OutSnapLocations) const
+void ABuildable::GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) const
 {
     for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
     {
@@ -181,7 +241,25 @@ void ABuildable::GetPipeSnapLocations(TArray<FVector>& OutSnapLocations) const
 
         if (!PipeConnectionComponent->IsConnected())
         {
-            OutSnapLocations.Add(PipeConnectionComponent->GetPipeSnapLocation());
+            OutSnapTransforms.Add(PipeConnectionComponent->GetPipeSnapTransform());
         }
     }
+}
+
+void ABuildable::SetIsPreviewing(bool InIsPreviewing)
+{
+    this->bIsPreviewing = InIsPreviewing;
+
+    this->UpdatePreviewing();
+}
+
+void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
+{
+    if (!this->StaticMeshComponent)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : this->StaticMeshComponent is nullptr"), __FUNCTION__);
+        return;
+    }
+
+    this->StaticMeshComponent->SetCollisionProfileName(InCollisionProfileName);
 }

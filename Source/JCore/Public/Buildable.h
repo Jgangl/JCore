@@ -3,6 +3,7 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
+#include "Net/UnrealNetwork.h"
 
 #include "BuildableInterface.h"
 #include "SteamFactory/PipeConnectionComponent.h"
@@ -19,10 +20,15 @@ class JCORE_API ABuildable : public AActor, public IBuildableInterface
 public:
     ABuildable();
 
+    virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
     virtual void OnConstruction(const FTransform& Transform) override;
 
     UFUNCTION(BlueprintCallable)
     void SetMaterial(UMaterialInterface* NewMaterial);
+
+    UFUNCTION(BlueprintCallable)
+    void SetMaterialInvalid();
 
     UFUNCTION(BlueprintCallable)
     void ResetMaterial();
@@ -31,7 +37,11 @@ public:
 
     virtual void CompleteBuilding() override;
 
-    virtual void GetPipeSnapLocations(TArray<FVector>& OutSnapLocations) const override;
+    virtual void GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) const override;
+
+    void SetIsPreviewing(bool InIsPreviewing);
+
+    void SetCollisionProfileName(const FName InCollisionProfileName);
 
 protected:
     virtual void BeginPlay() override;
@@ -39,6 +49,10 @@ protected:
     virtual void Destroyed() override;
 
     bool RemoveGraphNode();
+    void UpdatePreviewing();
+
+    UFUNCTION()
+    void OnRep_IsPreviewing();
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     UStaticMeshComponent* StaticMeshComponent;
@@ -51,6 +65,15 @@ protected:
 
     UPROPERTY(EditAnywhere)
     FVector BuildingOffset;
+
+    UPROPERTY(ReplicatedUsing=OnRep_IsPreviewing)
+    bool bIsPreviewing;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+    UMaterialInterface* ValidPreviewMaterial;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+    UMaterialInterface* InvalidPreviewMaterial;
 
     UPROPERTY(EditAnywhere)
     TArray<UPipeConnectionComponent*> PipeConnectionComponents;

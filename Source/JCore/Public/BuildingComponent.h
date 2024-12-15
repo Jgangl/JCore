@@ -66,10 +66,10 @@ public:
     void ServerStartBuildPreview(TSubclassOf<AActor> ActorToPreview);
 
     UFUNCTION(BlueprintCallable)
-    void ClearBuildingPreview();
+    void ClearBuildingPreview(bool bDestroy);
 
-    UFUNCTION(BlueprintCallable)
-    bool TryBuild();
+    UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerTryBuild();
 
     UFUNCTION(BlueprintCallable)
     bool TryDelete();
@@ -144,16 +144,10 @@ protected:
     FTransform ServerTargetTransform;
 
     UPROPERTY(BlueprintReadOnly)
-    TSubclassOf<AActor> CurrentBuildingClassInPreview;
+    TSubclassOf<ABuildable> CurrentBuildingClassInPreview;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
-    ABuildingPreview* CurrentBuildingPreview;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
-    UMaterialInterface* ValidPreviewMaterial;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
-    UMaterialInterface* InvalidPreviewMaterial;
+    ABuildable* CurrentBuildingPreview;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     float RotationGridSnapValue;
@@ -184,4 +178,6 @@ private:
     const FVector GetClosestGridLocationToCursor() const;
 
     const FVector GetGridLocation(const FVector& InLocation) const;
+
+    const FTransform GetClosestConnectionTransform(const FVector &Location, const TArray<FTransform> &ConnectionTransforms);
 };

@@ -23,6 +23,8 @@ public:
 
     void SetNodeClass(TSubclassOf<UNodeBase> InNodeClass);
 
+    void SetNodeLocation(const FVector &InLocation);
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     UNodeBase* Node;

@@ -4,7 +4,6 @@
 #include "BuildingComponent.h"
 
 #include "Buildable.h"
-#include "BuildableInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -103,8 +102,6 @@ void UBuildingComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
     DOREPLIFETIME(UBuildingComponent, ServerTargetTransform);
     DOREPLIFETIME(UBuildingComponent, bInDeleteMode);
     DOREPLIFETIME(UBuildingComponent, bInBuildMode);
-    DOREPLIFETIME_CONDITION(UBuildingComponent, ValidPreviewMaterial, COND_InitialOnly);
-    DOREPLIFETIME_CONDITION(UBuildingComponent, InvalidPreviewMaterial, COND_InitialOnly);
     DOREPLIFETIME_CONDITION(UBuildingComponent, TargetLocationRepFrequency, COND_InitialOnly);
 }
 
@@ -126,7 +123,7 @@ bool UBuildingComponent::IsInBuildMode() const
 void UBuildingComponent::ServerCancelBuilding_Implementation()
 {
     this->SetBuildMode(false);
-    this->ClearBuildingPreview();
+    this->ClearBuildingPreview(true);
 }
 
 void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
@@ -159,10 +156,7 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
     }
 
     // Delete previous preview
-    if (this->CurrentBuildingPreview)
-    {
-        this->CurrentBuildingPreview->Destroy();
-    }
+    this->ClearBuildingPreview(true);
 
     FVector GridCursorLocation = this->GetClosestGridLocationToCursor();
 
@@ -174,15 +168,11 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
 
     this->ClientTargetTransform = SpawnTransform;
 
-    FActorSpawnParameters SpawnParams;
-    ABuildingPreview* BuildingPreview =
-        GetWorld()->SpawnActor<ABuildingPreview>(ABuildingPreview::StaticClass(), SpawnTransform);
+    ABuildable* BuildingPreview =
+        GetWorld()->SpawnActor<ABuildable>(this->ActorClassToSpawn, SpawnTransform);
 
-    BuildingPreview->SetValidPreviewMaterial(this->ValidPreviewMaterial);
-    BuildingPreview->SetInvalidPreviewMaterial(this->InvalidPreviewMaterial);
-
+    this->CurrentBuildingPreview        = BuildingPreview;
     this->CurrentBuildingClassInPreview = ActorClassToPreview;
-    this->CurrentBuildingPreview = BuildingPreview;
 
     if (!this->CurrentBuildingPreview)
     {
@@ -190,7 +180,7 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
         return;
     }
 
-    this->CurrentBuildingPreview->UpdateMesh(this->CurrentBuildingClassInPreview);
+    this->CurrentBuildingPreview->SetIsPreviewing(true);
 }
 
 void UBuildingComponent::ServerRotateBuildObject_Implementation(const FRotator &DeltaRotation)
@@ -300,11 +290,6 @@ void UBuildingComponent::SetActorClassToSpawn(TSubclassOf<AActor> InActorClassTo
     {
         this->CurrentBuildingClassInPreview = this->ActorClassToSpawn;
     }
-
-    if (this->CurrentBuildingPreview)
-    {
-        this->CurrentBuildingPreview->UpdateMesh(this->CurrentBuildingClassInPreview);
-    }
 }
 
 void UBuildingComponent::AddCurrentBuildableOffset(FVector& InLocation) const
@@ -328,48 +313,47 @@ void UBuildingComponent::ServerSetDeleteMode_Implementation(bool InDeleteMode)
     this->SetDeleteMode(InDeleteMode);
 }
 
-void UBuildingComponent::ClearBuildingPreview()
+void UBuildingComponent::ClearBuildingPreview(bool bDestroy)
 {
     if (this->CurrentBuildingPreview)
     {
-        this->CurrentBuildingPreview->Destroy();
-        this->CurrentBuildingPreview = nullptr;
+        if (bDestroy)
+        {
+            this->CurrentBuildingPreview->Destroy();
+        }
 
-        this->CurrentBuildingClassInPreview = nullptr;
+        this->CurrentBuildingPreview = nullptr;
     }
+
+    this->CurrentBuildingClassInPreview = nullptr;
 }
 
-bool UBuildingComponent::TryBuild()
+void UBuildingComponent::ServerTryBuild_Implementation()
 {
-    if (!this->CurrentBuildingPreview)
+    ABuildable* BuildableToBuild                         = this->CurrentBuildingPreview;
+    const TSubclassOf<ABuildable> PreviousBuildableClass = this->CurrentBuildingClassInPreview;
+
+    if (!BuildableToBuild)
     {
-        UE_LOG(LogBuildingComponent, Verbose, TEXT("TryBuild : CurrentBuildingPreview null"))
-        return false;
+        UE_LOG(LogBuildingComponent, Verbose, TEXT("TryBuild : BuildableToBuild null"))
+        return;
     }
 
-    this->CurrentBuildingPreview->UpdatePlacementValid();
+    this->ClearBuildingPreview(false);
 
-    if (!this->CurrentBuildingPreview->IsPlacementValid())
-    {
-        UE_LOG(LogBuildingComponent, Error, TEXT("Placement not valid"))
-        // TODO: Display error to player
-        return false;
-    }
+    BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
 
-    AActor* SpawnedActor = GetWorld()->SpawnActor(this->ActorClassToSpawn,
-                                                  &this->ServerTargetTransform);
-
-    this->OnCompletedBuilding.Broadcast(SpawnedActor);
+    this->OnCompletedBuilding.Broadcast(BuildableToBuild);
 
     // Notify the buildable that it is finished building
-    if (IBuildableInterface* BuildableInterface = Cast<IBuildableInterface>(SpawnedActor))
+    if (IBuildableInterface* BuildableInterface = Cast<IBuildableInterface>(BuildableToBuild))
     {
         BuildableInterface->CompleteBuilding();
     }
 
-    this->PreviouslyCompletedBuilding = SpawnedActor;
+    this->PreviouslyCompletedBuilding = BuildableToBuild;
 
-    return true;
+    this->ServerStartBuilding(PreviousBuildableClass);
 }
 
 bool UBuildingComponent::TryDelete()
@@ -479,74 +463,119 @@ const FVector UBuildingComponent::GetGridLocation(const FVector& InLocation) con
     return FVector(GridX, GridY, GridZ);
 }
 
-void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
+const FTransform UBuildingComponent::GetClosestConnectionTransform(const FVector &Location, const TArray<FTransform> &ConnectionTransforms)
 {
-    FVector HitLocation = OutHits[0].Location;
+    float ClosestSnapLocationDistance = 10000000.0f;
+    FTransform ClosestTransform = FTransform();
 
-    if (this->bDebug)
+    // Get closest snap location
+    for (const FTransform SnapTransform : ConnectionTransforms)
     {
-        DrawDebugSphere(GetWorld(), HitLocation, 20.0f, 8, FColor::Blue, false);
+        const float Distance = FVector::Distance(Location, SnapTransform.GetLocation());
+
+        if (Distance < ClosestSnapLocationDistance)
+        {
+            ClosestTransform            = SnapTransform;
+            ClosestSnapLocationDistance = Distance;
+        }
     }
 
-    FVector GridLocation = this->GetGridLocation(HitLocation);
+    return ClosestTransform;
+}
 
+void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
+{
+    if (OutHits.Num() == 0)
+    {
+        return;
+    }
+
+    // TODO: Get hit result different to the 1st one in array
+    FHitResult TargetHitResult = OutHits[0];
+    IBuildableInterface* TargetBuildable = Cast<IBuildableInterface>(TargetHitResult.GetActor());
+
+    FVector HitLocation  = TargetHitResult.Location;
+    FVector GridLocation = this->GetGridLocation(HitLocation);
     this->AddCurrentBuildableOffset(GridLocation);
 
     if (this->bDebug)
     {
+        DrawDebugSphere(GetWorld(), HitLocation, 20.0f, 8, FColor::Blue, false);
         DrawDebugSphere(GetWorld(), GridLocation, 20.0f, 8, FColor::Green, false);
     }
 
     FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), GridLocation, FVector::One());
 
     bool bSnapping = false;
-    FVector ClosestSnapLocation = FVector::Zero();
 
-    // TODO: Get best hit result that is closest to snap location?
+    TArray<FTransform> OutTargetBuildablePipeSnapTransforms;
 
-    FHitResult TargetHitResult = OutHits[0];
-    for (const FHitResult& HitResult : OutHits)
+    if (TargetBuildable)
     {
-        IBuildableInterface* BuildableInterface = Cast<IBuildableInterface>(HitResult.GetActor());
+        TargetBuildable->GetPipeSnapTransforms(OutTargetBuildablePipeSnapTransforms);
 
-        if (!BuildableInterface)
+        if (OutTargetBuildablePipeSnapTransforms.Num() > 0)
         {
-            continue;
+            bSnapping = true;
         }
-
-        TArray<FVector> PipeSnapLocations;
-
-        BuildableInterface->GetPipeSnapLocations(PipeSnapLocations);
-
-        float ClosestSnapLocationDistance = 10000000.0f;
-
-        // Get closest snap location
-        for (const FVector SnapLocation : PipeSnapLocations)
-        {
-            if (this->bDebug)
-            {
-                //DrawDebugSphere(GetWorld(), SnapLocation, 20.0f, 8, FColor::Black, false);
-            }
-
-            float Distance = FVector::Distance(HitLocation, SnapLocation);
-
-            if (Distance < ClosestSnapLocationDistance)
-            {
-                ClosestSnapLocation         = SnapLocation;
-                ClosestSnapLocationDistance = Distance;
-            }
-        }
-
-        bSnapping = true;
-        TargetHitResult = HitResult;
-        break;
     }
 
-    if (bSnapping)
+    // TODO: Abstract this function into a utils class
+    const FTransform ClosestTransform = this->GetClosestConnectionTransform(HitLocation, OutTargetBuildablePipeSnapTransforms);
+
+
+    // TODO: I think we only want to get inverse (Add 180) to the forward axis of the connection component
+
+    FRotator OppositeForwardRotatorWorld = ClosestTransform.GetRotation().Rotator() + FRotator(0.0f, 180.0f, 0.0f);
+    //OppositeForwardRotator.Vec
+
+    TArray<FTransform> OutBuildingPreviewSnapTransforms;
+    this->CurrentBuildingPreview->GetPipeSnapTransforms(OutBuildingPreviewSnapTransforms);
+
+    if (bSnapping && OutBuildingPreviewSnapTransforms.Num() > 0)
     {
-        //HitLocation = TargetHitResult.Component->GetComponentLocation();
-        TargetTransform.SetLocation(ClosestSnapLocation);
-        //TargetTransform.SetRotation(TargetHitResult.Component->GetComponentRotation().Quaternion());
+        UE_LOG(LogTemp, Warning, TEXT("X: %f,  Y: %f,  Z: %f "), OppositeForwardRotatorWorld.Euler().X, OppositeForwardRotatorWorld.Euler().Y, OppositeForwardRotatorWorld.Euler().Z);
+        //UE_LOG(LogTemp, Warning, TEXT("Transform X: %f,  Y: %f,  Z: %f "), ClosestTransform.GetRotation().Euler().X, ClosestTransform.GetRotation().Euler().Y, ClosestTransform.GetRotation().Euler().Z);
+        // TODO: Calculate object rotation so that the connection components are facing each other
+
+        FVector End = ClosestTransform.GetLocation() + ClosestTransform.GetRotation().Vector() * 100.0f;
+        FVector InverseEnd = ClosestTransform.GetLocation() + OppositeForwardRotatorWorld.Vector() * 100.0f;
+        //DrawDebugLine(GetWorld(), ClosestTransform.GetLocation(), End, FColor::Purple, false, -1, 0, 3);
+        //DrawDebugSphere(GetWorld(), End, 25.0f, 8, FColor::Purple, false, -1, 0, 2);
+
+        DrawDebugLine(GetWorld(), ClosestTransform.GetLocation(), InverseEnd, FColor::Green, false, -1, 0, 3);
+        DrawDebugSphere(GetWorld(), InverseEnd, 25.0f, 8, FColor::Green, false, -1, 0, 2);
+
+
+        // TODO: We need to utilize the chosen building preview snap rotation as well
+        FTransform BuildingPreviewSnapTransform = OutBuildingPreviewSnapTransforms[0];
+
+        FRotator BuildingPreviewRelativeRotator = BuildingPreviewSnapTransform.GetRelativeTransform(this->CurrentBuildingPreview->GetTransform()).Rotator();
+
+        //FRotator RotationOffset = BuildingPreviewRelativeRotator - ClosestSnapRelativeRotator;
+
+        FRotator TargetRotation = OppositeForwardRotatorWorld + BuildingPreviewRelativeRotator;
+
+
+        // Add Offset
+        //TargetRotation = TargetRotation + RotationOffset;
+
+        FVector Loc = BuildingPreviewSnapTransform.GetLocation();
+        FVector RelativePreviewSnapLoc = this->CurrentBuildingPreview->GetTransform().InverseTransformPosition(Loc);
+
+        this->CurrentBuildingPreview->SetActorRotation(TargetRotation);
+
+        // THIS ISN'T NEEDED ANYMORE, WHY YOU ASK? I DON'T KNOW
+        // Rotate vector to align coordinate spaces
+        FRotator Rotator = this->CurrentBuildingPreview->GetActorRotation();
+        RelativePreviewSnapLoc = Rotator.RotateVector(RelativePreviewSnapLoc);
+
+        FVector CalculatedLocation = ClosestTransform.GetLocation() - RelativePreviewSnapLoc;
+
+
+
+        TargetTransform.SetRotation(TargetRotation.Quaternion());
+        TargetTransform.SetLocation(CalculatedLocation);
 
         if (!TargetTransform.Equals(this->ClientTargetTransform, 0.01f))
         {
@@ -602,7 +631,7 @@ void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)
             {
                 if (HoveringBuildable)
                 {
-                    HoveringBuildable->SetMaterial(this->InvalidPreviewMaterial);
+                    HoveringBuildable->SetMaterialInvalid();
                 }
 
                 this->ServerSetBuildableHoveringToDelete(HoveringBuildable);
