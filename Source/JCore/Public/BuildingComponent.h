@@ -85,6 +85,9 @@ public:
 
     void AddCurrentBuildableOffset(FVector& InLocation) const;
 
+    UFUNCTION(BlueprintCallable)
+    void IncrementBuildingPreviewRotationAxis();
+
     UPROPERTY(BlueprintAssignable)
     FOnCompletedBuilding OnCompletedBuilding;
 
@@ -137,6 +140,8 @@ protected:
 
     virtual void HandleBuildingPreview(TArray<FHitResult>& OutHits);
 
+    void IncrementBuildingPreviewSnapIndex();
+
     UPROPERTY(BlueprintReadOnly)
     FTransform ClientTargetTransform;
 
@@ -169,6 +174,14 @@ protected:
 
     UPROPERTY()
     AActor* PreviouslyCompletedBuilding;
+
+    EAxis::Type BuildingPreviewRotationAxis;
+
+    UPROPERTY()
+    bool bIsSnapping;
+
+    UPROPERTY(Transient)
+    int32 BuildingPreviewSnapIndex;
 
 private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
