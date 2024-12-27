@@ -5,6 +5,7 @@
 
 #include "Buildable.h"
 #include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UBuildingComponent::UBuildingComponent()
@@ -29,6 +30,7 @@ UBuildingComponent::UBuildingComponent()
     this->bFirstPersonInteraction = true;
 
     this->BuildingPreviewRotationAxis = EAxis::Type::Z;
+    this->BuildingPreviewRotationOffset = FRotator(0.0f, 0.0f, 0.0f);
 
     this->SetIsReplicatedByDefault(true);
 }
@@ -47,10 +49,7 @@ void UBuildingComponent::TickComponent(float DeltaTime,
                                  this->BuildingPreviewInterpSpeed);
 
         this->CurrentBuildingPreview->SetActorLocation(LerpedLocation);
-        if (!this->CurrentBuildingPreview->GetActorRotation().Equals(this->ServerTargetTransform.GetRotation().Rotator(), 1.0f))
-        {
-            this->CurrentBuildingPreview->SetActorRotation(this->ServerTargetTransform.GetRotation());
-        }
+        this->CurrentBuildingPreview->SetActorRotation(this->ServerTargetTransform.GetRotation());
     }
 
     APawn* OwningPawn = Cast<APawn>(GetOwner());
@@ -185,56 +184,52 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
     this->CurrentBuildingPreview->SetIsPreviewing(true);
 }
 
-void UBuildingComponent::ServerRotateBuildObject_Implementation(const FRotator &DeltaRotation)
-{
-    if (!this->CurrentBuildingPreview)
-        return;
-
-    FRotator NewRotation    = this->ServerTargetTransform.Rotator() + DeltaRotation;
-    FTransform NewTransform = this->ServerTargetTransform;
-    NewTransform.SetRotation(NewRotation.Quaternion());
-
-    this->ServerSetTargetTransform(NewTransform);
-}
-
 void UBuildingComponent::RotateBuildObject(bool bClockwise)
 {
+    // If the building preview is snapped, we want to rotate around the snapped connection's X Axis.
+    // If the building preview is NOT snapped, we want to rotate around the world Z Axis.
+
+    if (!this->CurrentBuildingPreview)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : this->CurrentBuildingPreview is nullptr"), __FUNCTION__);
+        return;
+    }
+
     FRotator DeltaRotation;
     float RotationAmount = bClockwise ? this->RotationGridSnapValue :
                                         -this->RotationGridSnapValue;
 
-    switch (this->BuildingPreviewRotationAxis)
+    if (this->bIsSnapping)
     {
-        case EAxis::Type::X :
+        DeltaRotation = FRotator(0.0f, 0.0f, RotationAmount);
+    }
+    else
+    {
+        switch (this->BuildingPreviewRotationAxis)
         {
-            DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
-            break;
-        }
-        case EAxis::Type::Y :
-        {
-            DeltaRotation = FRotator(0.0f, 0.0f, RotationAmount);
-            break;
-        }
-        case EAxis::Type::Z :
-        {
-            DeltaRotation = FRotator(0.0f, RotationAmount, 0.0f);
-            break;
-        }
-        default :
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Invalid rotation axis"));
+            case EAxis::Type::X :
+                {
+                    DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
+                    break;
+                }
+            case EAxis::Type::Y :
+                {
+                    DeltaRotation = FRotator(0.0f, 0.0f, RotationAmount);
+                    break;
+                }
+            case EAxis::Type::Z :
+                {
+                    DeltaRotation = FRotator(0.0f, RotationAmount, 0.0f);
+                    break;
+                }
+            default :
+                {
+                    UE_LOG(LogTemp, Warning, TEXT("Invalid rotation axis"));
+                }
         }
     }
 
-    //this->ClientTargetTransform.Rotator().Add()
-
-    if (this->CurrentBuildingPreview)
-    {
-        this->CurrentBuildingPreview->AddActorWorldRotation(DeltaRotation);
-        this->ClientTargetTransform.SetRotation(this->CurrentBuildingPreview->GetActorRotation().Quaternion());
-    }
-
-    //this->ClientTargetTransform.SetRotation((this->ClientTargetTransform.GetRotation().Rotator() + DeltaRotation).Quaternion());
+    this->BuildingPreviewRotationOffset += DeltaRotation;
 }
 
 void UBuildingComponent::SetDeleteMode(bool InDeleteMode)
@@ -289,6 +284,8 @@ void UBuildingComponent::ServerStartBuilding_Implementation(TSubclassOf<AActor> 
     this->SetBuildMode(true);
 
     this->ServerStartBuildPreview(ActorToBuild);
+
+    this->BuildingPreviewRotationOffset = FRotator::ZeroRotator;
 }
 
 AActor* UBuildingComponent::GetPreviouslyCompletedBuilding()
@@ -576,12 +573,10 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
     // TODO: Abstract this function into a utils class
     const FTransform ClosestTransform = this->GetClosestConnectionTransform(HitLocation, OutTargetBuildablePipeSnapTransforms);
 
-    FRotator ClosestRelativeRotator = ClosestTransform.GetRelativeTransform(TargetHitResult.GetActor()->GetTransform()).Rotator();
+    DrawDebugSphere(GetWorld(), ClosestTransform.GetLocation(), 20.0f, 10, FColor::Red);
+    DrawDebugSphere(GetWorld(), ClosestTransform.GetLocation() + ClosestTransform.GetUnitAxis(EAxis::X) * 50.0f, 20.0f, 10, FColor::Yellow);
 
-    // I think we only want to get inverse (Add 180) to the forward axis of the connection component
-    FRotator OppositeRotatorRelative = ClosestRelativeRotator + FRotator(0.0f, 180.0f, 0.0f);
-
-    //FRotator OppositeForwardRotatorWorld = TargetHitResult.GetActor()->GetTransform().TransformRotation(ClosestRelativeTransform.Quaternion()).Rotator();
+    FRotator OppositeRotatorWorld    = (ClosestTransform.GetLocation() + ClosestTransform.GetUnitAxis(EAxis::X) * -50.0f - ClosestTransform.GetLocation()).Rotation();
 
     TArray<FTransform> OutBuildingPreviewSnapTransforms;
     this->CurrentBuildingPreview->GetPipeSnapTransforms(OutBuildingPreviewSnapTransforms);
@@ -590,26 +585,29 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
     {
         this->bIsSnapping = true;
 
-        // Calculate object rotation so that the connection components are facing each other
-        //FVector InverseEnd = ClosestTransform.GetLocation() + OppositeForwardRotatorWorld.Vector() * 100.0f;
-
-        //DrawDebugLine(GetWorld(), ClosestTransform.GetLocation(), InverseEnd, FColor::Green, false, -1, 0, 3);
-        //DrawDebugSphere(GetWorld(), InverseEnd, 25.0f, 8, FColor::Green, false, -1, 0, 2);
-
         if (!OutBuildingPreviewSnapTransforms.IsValidIndex(this->BuildingPreviewSnapIndex))
         {
             UE_LOG(LogTemp, Error, TEXT("BuildingPreviewSnapIndex is invalid"));
             return;
         }
 
+        FVector End = ClosestTransform.GetLocation() + OppositeRotatorWorld.Vector() * 100.0f;
+
+        DrawDebugLine(GetWorld(), ClosestTransform.GetLocation(), End, FColor::Green);
+        DrawDebugSphere(GetWorld(), End, 20.0f, 10, FColor::Green);
+
         // TODO: We need to utilize the chosen building preview snap rotation as well
-        FTransform PreviewSnapTransformWorld = OutBuildingPreviewSnapTransforms[this->BuildingPreviewSnapIndex];
+        FTransform PreviewSnapTransformWorld    = OutBuildingPreviewSnapTransforms[this->BuildingPreviewSnapIndex];
+        FTransform PreviewSnapRelativeTransform = PreviewSnapTransformWorld.GetRelativeTransform(this->CurrentBuildingPreview->GetTransform());
 
-        FRotator BuildingPreviewRelativeRotator = PreviewSnapTransformWorld.GetRelativeTransform(this->CurrentBuildingPreview->GetTransform()).Rotator();
+        FQuat RotationOffsetWorld = FQuat(PreviewSnapRelativeTransform.GetRotation().Vector(), FMath::DegreesToRadians(this->BuildingPreviewRotationOffset.Euler().X));
 
-        FRotator TargetRotation = OppositeRotatorRelative - BuildingPreviewRelativeRotator;
+        FRotator TargetRotation = (OppositeRotatorWorld.Quaternion() * PreviewSnapRelativeTransform.Rotator().GetInverse().Quaternion()).Rotator();
 
-        TargetRotation = TargetHitResult.GetActor()->GetTransform().TransformRotation(TargetRotation.Quaternion()).Rotator();
+        TargetRotation = (TargetRotation.Quaternion() * RotationOffsetWorld).Rotator();
+
+        UE_LOG(LogTemp, Warning, TEXT("x %f  y %f  z %f"), OppositeRotatorWorld.Euler().X, OppositeRotatorWorld.Euler().Y, OppositeRotatorWorld.Euler().Z);
+        UE_LOG(LogTemp, Warning, TEXT("x %f  y %f  z %f"), PreviewSnapRelativeTransform.Rotator().Euler().X, PreviewSnapRelativeTransform.Rotator().Euler().Y, PreviewSnapRelativeTransform.Rotator().Euler().Z);
 
         FVector RelativePreviewSnapLoc = this->CurrentBuildingPreview->GetTransform().InverseTransformPosition(PreviewSnapTransformWorld.GetLocation());
 
@@ -617,13 +615,12 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
         FVector CalculatedLocation = ClosestTransform.GetLocation() - RelativePreviewSnapLoc;
 
+         //this->CurrentBuildingPreview->SetActorRotation(TargetRotation);
+
         TargetTransform.SetRotation(TargetRotation.Quaternion());
         TargetTransform.SetLocation(CalculatedLocation);
 
-        if (!TargetTransform.Equals(this->ClientTargetTransform, 0.01f))
-        {
-            this->ServerSetTargetTransform(TargetTransform);
-        }
+        this->ServerSetTargetTransform(TargetTransform);
     }
     else
     {
@@ -636,6 +633,7 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
         }
     }
 
+    this->ClientTargetTransform.SetRotation(TargetTransform.GetRotation());
     this->ClientTargetTransform.SetLocation(TargetTransform.GetLocation());
 }
 

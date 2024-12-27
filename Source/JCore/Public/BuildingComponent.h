@@ -41,9 +41,6 @@ public:
     UFUNCTION(Server, Reliable, BlueprintCallable)
     void ServerCancelBuilding();
 
-    UFUNCTION(Server, Unreliable, BlueprintCallable)
-    void ServerRotateBuildObject(const FRotator &DeltaRotation);
-
     UFUNCTION(BlueprintCallable)
     void RotateBuildObject(bool bClockwise);
 
@@ -182,6 +179,9 @@ protected:
 
     UPROPERTY(Transient)
     int32 BuildingPreviewSnapIndex;
+
+    UPROPERTY(Transient)
+    FRotator BuildingPreviewRotationOffset;
 
 private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
