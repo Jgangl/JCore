@@ -52,7 +52,6 @@ bool UGraphBase::RemoveNode(UNodeBase* NodeToRemove)
     }
 
     this->Nodes.Remove(NodeToRemove);
-
     this->OnNodeRemoved.Broadcast(NodeToRemove);
 
     return true;
@@ -155,7 +154,7 @@ bool UGraphBase::BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode
 
         if (!CurrentNode) continue;
 
-        UE_LOG(LogTemp, Warning, TEXT("Visiting Node: %s"), *CurrentNode->GetName());
+        //UE_LOG(LogTemp, Warning, TEXT("Visiting Node: %s"), *CurrentNode->GetName());
 
         if (CurrentNode == TargetNode)
         {
@@ -164,7 +163,59 @@ bool UGraphBase::BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode
 
         int NumNeighbors = CurrentNode->GetAdjacencyList().Num();
 
-        UE_LOG(LogTemp, Warning, TEXT("Num neighbors: %d"), NumNeighbors);
+        //UE_LOG(LogTemp, Warning, TEXT("Num neighbors: %d"), NumNeighbors);
+
+        for (UNodeBase* NeighborNode : CurrentNode->GetAdjacencyList())
+        {
+            // Don't visit the same node twice
+            if (!VisitedNodes.Contains(NeighborNode))
+            {
+                VisitedNodes.Add(NeighborNode);
+                UnvisitedNodes.Enqueue(NeighborNode);
+            }
+        }
+    }
+
+    return false;
+}
+
+bool UGraphBase::BreadthFirstSearchNodes(UNodeBase* SourceNode, TArray<UNodeBase*> TargetNodes)
+{
+    if (!SourceNode)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : SourceNode is nullptr"), __FUNCTION__);
+        return false;
+    }
+
+    if (TargetNodes.IsEmpty())
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : TargetNode Array is empty"), __FUNCTION__);
+        return false;
+    }
+
+    TQueue<UNodeBase*> UnvisitedNodes;
+    TArray<UNodeBase*> VisitedNodes;
+
+    VisitedNodes.Add(SourceNode);
+    UnvisitedNodes.Enqueue(SourceNode);
+
+    while (!UnvisitedNodes.IsEmpty())
+    {
+        UNodeBase* CurrentNode;
+        UnvisitedNodes.Dequeue(CurrentNode);
+
+        if (!CurrentNode) continue;
+
+        //UE_LOG(LogTemp, Warning, TEXT("Visiting Node: %s"), *CurrentNode->GetName());
+
+        if (TargetNodes.Contains(CurrentNode))
+        {
+            return true;
+        }
+
+        int NumNeighbors = CurrentNode->GetAdjacencyList().Num();
+
+        //UE_LOG(LogTemp, Warning, TEXT("Num neighbors: %d"), NumNeighbors);
 
         for (UNodeBase* NeighborNode : CurrentNode->GetAdjacencyList())
         {

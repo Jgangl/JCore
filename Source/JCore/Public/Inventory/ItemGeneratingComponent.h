@@ -22,6 +22,9 @@ public:
     void SetInventoryComponent(UInventoryComponent* InInventoryComponent);
 
     UFUNCTION(BlueprintCallable)
+    void SetItemToGenerate(UItemDataAsset* InItemToGenerate);
+
+    UFUNCTION(BlueprintCallable)
     void StartGenerating();
 
     UFUNCTION(BlueprintCallable)

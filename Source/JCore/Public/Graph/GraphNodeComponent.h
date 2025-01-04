@@ -18,6 +18,8 @@ public:
 
     virtual void BeginPlay() override;
 
+    virtual void OnRegister() override;
+
     UFUNCTION(BlueprintCallable)
     UNodeBase* GetNode() const;
 

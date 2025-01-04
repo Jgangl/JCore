@@ -44,6 +44,9 @@ public:
     UFUNCTION(BlueprintCallable)
     bool BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode);
 
+    UFUNCTION(BlueprintCallable)
+    bool BreadthFirstSearchNodes(UNodeBase* SourceNode, TArray<UNodeBase*> TargetNodes);
+
     UPROPERTY(BlueprintAssignable)
     FOnNodeAdded OnNodeAdded;
 

@@ -16,14 +16,11 @@ UGraphNodeComponent::UGraphNodeComponent()
 void UGraphNodeComponent::BeginPlay()
 {
     Super::BeginPlay();
+}
 
-    AActor* Owner = GetOwner();
-
-    if (!Owner)
-    {
-        UE_LOG(LogTemp, Error, TEXT("%hs : Owner is nullptr"), __FUNCTION__);
-        return;
-    }
+void UGraphNodeComponent::OnRegister()
+{
+    Super::OnRegister();
 
     this->Node = NewObject<UNodeBase>(this, this->NodeClass);
 }

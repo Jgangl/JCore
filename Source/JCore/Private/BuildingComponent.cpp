@@ -208,24 +208,24 @@ void UBuildingComponent::RotateBuildObject(bool bClockwise)
         switch (this->BuildingPreviewRotationAxis)
         {
             case EAxis::Type::X :
-                {
-                    DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
-                    break;
-                }
+            {
+                DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
+                break;
+            }
             case EAxis::Type::Y :
-                {
-                    DeltaRotation = FRotator(0.0f, 0.0f, RotationAmount);
-                    break;
-                }
+            {
+                DeltaRotation = FRotator(0.0f, 0.0f, RotationAmount);
+                break;
+            }
             case EAxis::Type::Z :
-                {
-                    DeltaRotation = FRotator(0.0f, RotationAmount, 0.0f);
-                    break;
-                }
+            {
+                DeltaRotation = FRotator(0.0f, RotationAmount, 0.0f);
+                break;
+            }
             default :
-                {
-                    UE_LOG(LogTemp, Warning, TEXT("Invalid rotation axis"));
-                }
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Invalid rotation axis"));
+            }
         }
     }
 
@@ -595,7 +595,6 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
             DrawDebugSphere(GetWorld(), End, 20.0f, 10, FColor::Green);
         }
 
-        // TODO: We need to utilize the chosen building preview snap rotation as well
         FTransform PreviewSnapTransformWorld    = OutBuildingPreviewSnapTransforms[this->BuildingPreviewSnapIndex];
         FTransform PreviewSnapRelativeTransform = PreviewSnapTransformWorld.GetRelativeTransform(this->CurrentBuildingPreview->GetTransform());
 

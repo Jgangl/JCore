@@ -15,6 +15,11 @@ void UItemGeneratingComponent::SetInventoryComponent(UInventoryComponent* InInve
     this->InventoryComponent = InInventoryComponent;
 }
 
+void UItemGeneratingComponent::SetItemToGenerate(UItemDataAsset* InItemToGenerate)
+{
+    this->ItemToGenerate = InItemToGenerate;
+}
+
 void UItemGeneratingComponent::StartGenerating()
 {
     const UWorld* World = GetWorld();
@@ -53,5 +58,9 @@ void UItemGeneratingComponent::OnGeneratingTimerEnded()
         return;
     }
 
-    this->InventoryComponent->TryAddItem(this->ItemToGenerate, 1);
+    if (!this->InventoryComponent->IsInventoryFull() ||
+        this->InventoryComponent->ContainsPartialStack(this->ItemToGenerate) >= 0)
+    {
+        this->InventoryComponent->TryAddItem(this->ItemToGenerate, 1);
+    }
 }
