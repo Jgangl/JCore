@@ -27,7 +27,7 @@ public class JCore : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", "Engine", "SteamFactory",
+                "Core", "Engine", "SteamFactory", "UMG"
                 // ... add other public dependencies that you statically link with here ...
             }
         );
