@@ -126,20 +126,6 @@ void ABuildable::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
 
-    GetComponents<UPipeConnectionComponent>(this->PipeConnectionComponents, true);
-
-    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
-    {
-        if (!PipeConnectionComponent)
-        {
-            UE_LOG(LogBuildable, Error, TEXT("OnConstruction: PipeConnectionComponent is null"))
-            return;
-        }
-
-        //PipeConnectionComponent->OnConnected.AddDynamic(this, &ABuildable::OnConnectionConnected);
-        //PipeConnectionComponent->OnDisconnected.AddDynamic(this, &ABuildable::OnConnectionDisconnected);
-    }
-
     GetComponents(this->MeshComponents);
 
     for (UMeshComponent* MeshComponent : this->MeshComponents)
@@ -195,6 +181,8 @@ void ABuildable::CompleteBuilding()
 {
     this->SetIsPreviewing(false);
 
+    GetComponents<UPipeConnectionComponent>(this->PipeConnectionComponents, true);
+
     TArray<UNodeBase*> OutNeighborNodes;
 
     for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
@@ -204,6 +192,8 @@ void ABuildable::CompleteBuilding()
         PipeConnectionComponent->UpdateConnections(OutNeighborNodes);
     }
 
+
+    // TODO: Move this section of code to a function
     UGraphNodeComponent* GraphNodeComponent = Cast<UGraphNodeComponent>(this->GetComponentByClass(UGraphNodeComponent::StaticClass()));
 
     if (!GraphNodeComponent)

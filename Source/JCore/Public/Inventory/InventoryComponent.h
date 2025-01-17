@@ -74,6 +74,12 @@ public:
     bool IsInventoryFull();
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool IsInventoryEmpty();
+
+    UFUNCTION(BlueprintCallable)
+    void SetNumberOfSlots(int InNumberOfSlots);
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
     TArray<FInventorySlot>& GetInventorySlots() { return this->InventorySlots; };
 
     UFUNCTION(BlueprintCallable)

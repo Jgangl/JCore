@@ -426,6 +426,29 @@ bool UInventoryComponent::IsInventoryFull()
     return bFull;
 }
 
+bool UInventoryComponent::IsInventoryEmpty()
+{
+    bool bEmpty = true;
+
+    for (int i = 0; i < this->InventorySlots.Num(); i++)
+    {
+        const FInventorySlot InventorySlot = this->InventorySlots[i];
+
+        if (!this->IsSlotEmpty(InventorySlot))
+        {
+            bEmpty = false;
+            break;
+        }
+    }
+
+    return bEmpty;
+}
+
+void UInventoryComponent::SetNumberOfSlots(int InNumberOfSlots)
+{
+    this->NumberOfSlots = InNumberOfSlots;
+}
+
 bool UInventoryComponent::IsSlotFull(const FInventorySlot& SlotToCheck)
 {
     UItemDataAsset* ItemDataAsset = SlotToCheck.Item;
