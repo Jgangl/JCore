@@ -389,6 +389,10 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         return;
     }
 
+    // Get inventory component, check if player has buildable recipe items
+    // Try to remove items
+    // If successful, complete building
+
     this->ClearBuildingPreview(false);
 
     BuildableToBuild->SetActorTransform(this->ServerTargetTransform);

@@ -140,6 +140,11 @@ void ABuildable::OnConstruction(const FTransform& Transform)
     }
 }
 
+FString ABuildable::GetDisplayName() const
+{
+    return this->DisplayName;
+}
+
 void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
 {
     if (!NewMaterial)

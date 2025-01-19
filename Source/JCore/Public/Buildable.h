@@ -25,6 +25,9 @@ public:
     virtual void OnConstruction(const FTransform& Transform) override;
 
     UFUNCTION(BlueprintCallable)
+    FString GetDisplayName() const;
+
+    UFUNCTION(BlueprintCallable)
     void SetMaterial(UMaterialInterface* NewMaterial);
 
     UFUNCTION(BlueprintCallable)
@@ -49,10 +52,14 @@ protected:
     virtual void Destroyed() override;
 
     bool RemoveGraphNode();
+
     void UpdatePreviewing();
 
     UFUNCTION()
     void OnRep_IsPreviewing();
+
+    UPROPERTY(EditAnywhere)
+    FString DisplayName;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     UStaticMeshComponent* StaticMeshComponent;
