@@ -50,6 +50,10 @@ public:
     UFUNCTION(BlueprintCallable)
     bool TryRemoveItem(UItemDataAsset* ItemToRemove, const int Amount = 1);
 
+    /** Removes the given items and amounts. *MUST BE CALLED ON SERVER* */
+    UFUNCTION(BlueprintCallable)
+    bool TryRemoveGivenItems(const TMap<UItemDataAsset*, int32> &ItemsToRemove);
+
     /** Removes item at the given index. *MUST BE CALLED ON SERVER* */
     UFUNCTION(BlueprintCallable)
     bool TryRemoveItemAtIndex(int32 IndexToRemove, const int Amount = 1);
@@ -61,10 +65,13 @@ public:
     void ClientRemoveItem(UItemDataAsset* ItemToRemove, const int Amount = 1);
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
-    bool ContainsItemAmount(UItemDataAsset* ItemToCheck, const int Amount = 1);
+    bool ContainsItemAmount(UItemDataAsset* ItemToCheck, const int Amount = 1) const;
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
     int32 ContainsItem(UItemDataAsset* ItemToCheck);
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool ContainsGivenItems(const TMap<UItemDataAsset*, int32> &Items) const;
 
     /** Returns the index of a slot with a partial stack of the given item. Returns -1 if none found. */
     UFUNCTION(BlueprintCallable, BlueprintPure)

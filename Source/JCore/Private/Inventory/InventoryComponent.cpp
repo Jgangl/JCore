@@ -262,6 +262,26 @@ bool UInventoryComponent::TryRemoveItem(UItemDataAsset* ItemToRemove, int Amount
     return true;
 }
 
+bool UInventoryComponent::TryRemoveGivenItems(const TMap<UItemDataAsset*, int32>& ItemsToRemove)
+{
+    if (!this->ContainsGivenItems(ItemsToRemove))
+    {
+        return false;
+    }
+
+    // TODO : Should we verify item removal?
+
+    for (const TTuple<UItemDataAsset*, int> ItemToRemove : ItemsToRemove)
+    {
+        if (!this->TryRemoveItem(ItemToRemove.Key, ItemToRemove.Value))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 bool UInventoryComponent::TryRemoveItemAtIndex(int32 IndexToRemove, const int Amount)
 {
     if (!this->InventorySlots.IsValidIndex(IndexToRemove))
@@ -324,7 +344,7 @@ void UInventoryComponent::ClientRemoveItem_Implementation(UItemDataAsset* ItemTo
     this->OnItemRemoved.Broadcast(ItemToRemove, Amount);
 }
 
-bool UInventoryComponent::ContainsItemAmount(UItemDataAsset* ItemToCheck, const int Amount)
+bool UInventoryComponent::ContainsItemAmount(UItemDataAsset* ItemToCheck, const int Amount) const
 {
     if (!ItemToCheck)
     {
@@ -382,6 +402,19 @@ int32 UInventoryComponent::ContainsItem(UItemDataAsset* ItemToCheck)
     }
 
     return NumItems;
+}
+
+bool UInventoryComponent::ContainsGivenItems(const TMap<UItemDataAsset*, int32>& Items) const
+{
+    for (const TTuple<UItemDataAsset*, int> Item : Items)
+    {
+        if (!this->ContainsItemAmount(Item.Key, Item.Value))
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 int32 UInventoryComponent::ContainsPartialStack(UItemDataAsset* ItemToCheck)

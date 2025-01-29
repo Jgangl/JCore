@@ -24,6 +24,8 @@ public:
 
     virtual void OnConstruction(const FTransform& Transform) override;
 
+    virtual void Tick(float DeltaSeconds) override;
+
     UFUNCTION(BlueprintCallable)
     FString GetDisplayName() const;
 
@@ -46,6 +48,8 @@ public:
 
     void SetCollisionProfileName(const FName InCollisionProfileName);
 
+    bool IsPlacementValid() const;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -57,6 +61,12 @@ protected:
 
     UFUNCTION()
     void OnRep_IsPreviewing();
+
+    UFUNCTION(BlueprintCallable)
+    void UpdatePlacementValidity();
+
+    UFUNCTION()
+    void OnRep_bPlacementValid();
 
     UPROPERTY(EditAnywhere)
     FString DisplayName;
@@ -75,6 +85,9 @@ protected:
 
     UPROPERTY(ReplicatedUsing=OnRep_IsPreviewing)
     bool bIsPreviewing;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_bPlacementValid)
+    bool bValidPlacement;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
     UMaterialInterface* ValidPreviewMaterial;

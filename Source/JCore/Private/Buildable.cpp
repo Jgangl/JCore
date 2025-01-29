@@ -14,7 +14,8 @@ ABuildable::ABuildable()
     this->StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh Component"));
     this->SetRootComponent(this->StaticMeshComponent);
 
-    this->bIsPreviewing = false;
+    this->bIsPreviewing   = false;
+    this->bValidPlacement = false;
 
     this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Block);
 
@@ -122,6 +123,41 @@ void ABuildable::OnRep_IsPreviewing()
     this->UpdatePreviewing();
 }
 
+void ABuildable::UpdatePlacementValidity()
+{
+    // Update material
+    // We should not be able to build if we are overlapping other buildables or a character
+
+    bool bLocalValidPlacement = true;
+
+    TArray<AActor*> OverlapplingActors;
+    GetOverlappingActors(OverlapplingActors);
+
+    for (AActor* OverlappingActor : OverlapplingActors)
+    {
+        if (OverlappingActor->IsA(APawn::StaticClass()) ||
+            OverlappingActor->IsA(ABuildable::StaticClass()))
+        {
+            bLocalValidPlacement = false;
+        }
+    }
+
+    this->bValidPlacement = bLocalValidPlacement;
+    this->OnRep_bPlacementValid();
+}
+
+void ABuildable::OnRep_bPlacementValid()
+{
+    if (this->bValidPlacement)
+    {
+        this->SetMaterial(this->ValidPreviewMaterial);
+    }
+    else
+    {
+        this->SetMaterialInvalid();
+    }
+}
+
 void ABuildable::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
@@ -137,6 +173,22 @@ void ABuildable::OnConstruction(const FTransform& Transform)
             MeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
                                                          ECollisionResponse::ECR_Block);
         }
+    }
+}
+
+void ABuildable::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
+
+    if (!this->HasAuthority())
+    {
+        return;
+    }
+
+    // Only update placement validity on server
+    if (this->bIsPreviewing)
+    {
+        this->UpdatePlacementValidity();
     }
 }
 
@@ -157,7 +209,9 @@ void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
     {
         if (!MeshComponent) continue;
 
-        MeshComponent->SetMaterial(0, NewMaterial);
+        MeshComponent->SetOverlayMaterial(NewMaterial);
+
+        //MeshComponent->SetMaterial(0, NewMaterial);
     }
 }
 
@@ -174,6 +228,8 @@ void ABuildable::ResetMaterial()
         UMaterialInterface* OriginalMaterial = this->OriginalMaterials[i];
 
         MeshComponent->SetMaterial(0, OriginalMaterial);
+
+        MeshComponent->SetOverlayMaterial(nullptr);
     }
 }
 
@@ -250,11 +306,15 @@ void ABuildable::SetIsPreviewing(bool InIsPreviewing)
 
 void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
 {
-    if (!this->StaticMeshComponent)
+    for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
-        UE_LOG(LogTemp, Error, TEXT("%hs : this->StaticMeshComponent is nullptr"), __FUNCTION__);
-        return;
-    }
+        if (!MeshComponent) continue;
 
-    this->StaticMeshComponent->SetCollisionProfileName(InCollisionProfileName);
+        MeshComponent->SetCollisionProfileName(InCollisionProfileName);
+    }
+}
+
+bool ABuildable::IsPlacementValid() const
+{
+    return this->bValidPlacement;
 }

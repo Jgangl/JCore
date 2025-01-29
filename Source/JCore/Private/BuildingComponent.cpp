@@ -4,6 +4,7 @@
 #include "BuildingComponent.h"
 
 #include "Buildable.h"
+#include "Inventory/InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -31,6 +32,12 @@ UBuildingComponent::UBuildingComponent()
 
     this->BuildingPreviewRotationAxis = EAxis::Type::Z;
     this->BuildingPreviewRotationOffset = FRotator(0.0f, 0.0f, 0.0f);
+
+    this->CurrentBuildingPreviewRecipe = nullptr;
+
+    this->DeleteHoldTime = 0.45f;
+
+    this->bRequireItemsToBuild = true;
 
     this->SetIsReplicatedByDefault(true);
 }
@@ -131,12 +138,7 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
 {
     if (!ActorClassToPreview)
     {
-        if (this->ActorClassesToSpawn.Num() == 0)
-        {
-            return;
-        }
-
-        ActorClassToPreview = this->ActorClassesToSpawn[0];
+        return;
     }
 
     AActor* ActorToPreview = ActorClassToPreview.GetDefaultObject();
@@ -157,7 +159,11 @@ void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AAct
     }
 
     // Delete previous preview
-    this->ClearBuildingPreview(true);
+    if (this->CurrentBuildingPreview)
+    {
+        this->CurrentBuildingPreview->Destroy();
+        this->CurrentBuildingPreview = nullptr;
+    }
 
     FVector GridCursorLocation = this->GetClosestGridLocationToCursor();
 
@@ -261,6 +267,8 @@ void UBuildingComponent::SetDeleteMode(bool InDeleteMode)
             }
 
             this->BuildableHoveringToDelete = nullptr;
+
+            this->CancelDeleting();
         }
     }
 }
@@ -281,35 +289,16 @@ void UBuildingComponent::SetBuildMode(bool InBuildMode)
 
 void UBuildingComponent::ServerStartBuilding_Implementation(TSubclassOf<AActor> ActorToBuild)
 {
-    this->SetBuildMode(true);
-    this->ServerStartBuildPreview(ActorToBuild);
-
     this->BuildingPreviewRotationOffset = FRotator::ZeroRotator;
     this->BuildingPreviewSnapIndex      = 0;
+
+    this->SetBuildMode(true);
+    this->ServerStartBuildPreview(ActorToBuild);
 }
 
 AActor* UBuildingComponent::GetPreviouslyCompletedBuilding()
 {
     return this->PreviouslyCompletedBuilding;
-}
-
-void UBuildingComponent::IncrementSelectedActorToSpawn()
-{
-    if (!this->ActorClassesToSpawn.IsValidIndex(this->SelectedActorToSpawnIndex))
-    {
-        UE_LOG(LogBuildingComponent, Error, TEXT("IncrementSelectedActorToSpawn: SelectedActorToSpawnIndex (%d) is invalid"), this->SelectedActorToSpawnIndex)
-        return;
-    }
-
-    this->SelectedActorToSpawnIndex++;
-
-    // Wrap
-    if (this->SelectedActorToSpawnIndex == this->ActorClassesToSpawn.Num())
-    {
-        this->SelectedActorToSpawnIndex = 0;
-    }
-
-    this->ActorClassToSpawn = this->ActorClassesToSpawn[this->SelectedActorToSpawnIndex];
 }
 
 void UBuildingComponent::SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn)
@@ -320,6 +309,11 @@ void UBuildingComponent::SetActorClassToSpawn(TSubclassOf<AActor> InActorClassTo
     {
         this->CurrentBuildingClassInPreview = this->ActorClassToSpawn;
     }
+}
+
+void UBuildingComponent::SetCurrentBuildingRecipe(UBuildingRecipeDataAsset* InBuildingRecipe)
+{
+    this->CurrentBuildingPreviewRecipe = InBuildingRecipe;
 }
 
 void UBuildingComponent::AddCurrentBuildableOffset(FVector& InLocation) const
@@ -350,6 +344,11 @@ void UBuildingComponent::IncrementBuildingPreviewRotationAxis()
     }
 }
 
+const FTimerHandle& UBuildingComponent::GetDeleteTimerHandle() const
+{
+    return this->DeleteTimerHandle;
+}
+
 void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuildable* NewBuildable)
 {
     if (this->BuildableHoveringToDelete != NewBuildable)
@@ -361,6 +360,27 @@ void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuil
 void UBuildingComponent::ServerSetDeleteMode_Implementation(bool InDeleteMode)
 {
     this->SetDeleteMode(InDeleteMode);
+}
+
+void UBuildingComponent::ServerStartBuildingFromRecipe_Implementation(UBuildingRecipeDataAsset* RecipeDataAsset)
+{
+    if (!RecipeDataAsset)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : RecipeDataAsset is nullptr"), __FUNCTION__);
+        return;
+    }
+
+    this->SetCurrentBuildingRecipe(RecipeDataAsset);
+
+    UBuildingDataAsset* BuildingDataAsset = RecipeDataAsset->GetOutBuilding();
+
+    if (!BuildingDataAsset)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : BuildingDataAsset is nullptr"), __FUNCTION__);
+        return;
+    }
+
+    this->ServerStartBuilding(BuildingDataAsset->GetBuildableClass());
 }
 
 void UBuildingComponent::ClearBuildingPreview(bool bDestroy)
@@ -376,12 +396,13 @@ void UBuildingComponent::ClearBuildingPreview(bool bDestroy)
     }
 
     this->CurrentBuildingClassInPreview = nullptr;
+    this->CurrentBuildingPreviewRecipe  = nullptr;
 }
 
 void UBuildingComponent::ServerTryBuild_Implementation()
 {
-    ABuildable* BuildableToBuild                         = this->CurrentBuildingPreview;
-    const TSubclassOf<ABuildable> PreviousBuildableClass = this->CurrentBuildingClassInPreview;
+    ABuildable* BuildableToBuild                     = this->CurrentBuildingPreview;
+    UBuildingRecipeDataAsset* PreviousBuildingRecipe = this->CurrentBuildingPreviewRecipe;
 
     if (!BuildableToBuild)
     {
@@ -389,9 +410,56 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         return;
     }
 
-    // Get inventory component, check if player has buildable recipe items
+    // Check placement validity
+    if (!BuildableToBuild->IsPlacementValid())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("%hs : Building placement is invalid"), __FUNCTION__);
+        return;
+    }
+
+    AActor* Owner = GetOwner();
+
+    if (!Owner)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : Owner is nullptr"), __FUNCTION__);
+        return;
+    }
+
+    UInventoryComponent* PlayerInventory = Cast<UInventoryComponent>(Owner->GetComponentByClass(UInventoryComponent::StaticClass()));
+
+    if (!PlayerInventory)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : PlayerInventory was not found on Owner"), __FUNCTION__);
+        return;
+    }
+
+    if (!this->CurrentBuildingPreviewRecipe)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : CurrentBuildingPreviewRecipe is nullptr"), __FUNCTION__);
+        return;
+    }
+
+    // Check if player has buildable recipe items
     // Try to remove items
     // If successful, complete building
+    if (this->bRequireItemsToBuild)
+    {
+        bool bPlayerHasSufficientItems = PlayerInventory->ContainsGivenItems(this->CurrentBuildingPreviewRecipe->GetInItems());
+
+        if (!bPlayerHasSufficientItems)
+        {
+            // TODO: Warn player of insufficient items
+            UE_LOG(LogBuildingComponent, Warning, TEXT("ServerTryBuild : Insufficient items for building"));
+            return;
+        }
+
+        // Remove items from inventory
+        if (!PlayerInventory->TryRemoveGivenItems(this->CurrentBuildingPreviewRecipe->GetInItems()))
+        {
+            UE_LOG(LogBuildingComponent, Warning, TEXT("ServerTryBuild : Removing items failed, this is not good, should be fixed if this is reached"));
+            return;
+        }
+    }
 
     this->ClearBuildingPreview(false);
 
@@ -407,20 +475,55 @@ void UBuildingComponent::ServerTryBuild_Implementation()
 
     this->PreviouslyCompletedBuilding = BuildableToBuild;
 
-    this->ServerStartBuilding(PreviousBuildableClass);
+    this->ServerStartBuildingFromRecipe(PreviousBuildingRecipe);
 }
 
-bool UBuildingComponent::TryDelete()
+void UBuildingComponent::StartDeleting()
 {
     if (!this->BuildableHoveringToDelete)
     {
-        return false;
+        return;
     }
+
+    UWorld* World = GetWorld();
+
+    if (!World) return;
+
+    World->GetTimerManager().SetTimer(this->DeleteTimerHandle,
+                                      this,
+                                      &UBuildingComponent::FinishDeleting,
+                                      this->DeleteHoldTime,
+                                      false);
+
+    this->OnDeletingStarted.Broadcast();
+}
+
+void UBuildingComponent::CancelDeleting()
+{
+    UWorld* World = GetWorld();
+
+    if (!World) return;
+
+    World->GetTimerManager().ClearTimer(this->DeleteTimerHandle);
+
+    this->OnDeletingCanceled.Broadcast();
+}
+
+void UBuildingComponent::FinishDeleting()
+{
+    if (!this->BuildableHoveringToDelete)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+
+    if (!World) return;
+
+    World->GetTimerManager().ClearTimer(this->DeleteTimerHandle);
 
     this->BuildableHoveringToDelete->Destroy();
     this->BuildableHoveringToDelete = nullptr;
-
-    return true;
 }
 
 void UBuildingComponent::ServerSetTargetTransform_Implementation(const FTransform& TargetTransform)
@@ -535,6 +638,23 @@ const FTransform UBuildingComponent::GetClosestConnectionTransform(const FVector
     }
 
     return ClosestTransform;
+}
+
+TSubclassOf<ABuildable> UBuildingComponent::GetCurrentRecipeBuildingClass() const
+{
+    if (!this->CurrentBuildingPreviewRecipe)
+    {
+        return nullptr;
+    }
+
+    UBuildingDataAsset* BuildingDataAsset = this->CurrentBuildingPreviewRecipe->GetOutBuilding();
+
+    if (!BuildingDataAsset)
+    {
+        return nullptr;
+    }
+
+    return BuildingDataAsset->GetBuildableClass();
 }
 
 void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)

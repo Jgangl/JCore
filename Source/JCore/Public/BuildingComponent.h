@@ -5,17 +5,18 @@
 #include "Net/UnrealNetwork.h"
 
 #include "BuildingPreview.h"
+#include "Inventory/BuildingRecipeDataAsset.h"
 
 #include "BuildingComponent.generated.h"
 
 class ABuildable;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCompletedBuilding, AActor*, Building);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeletingStarted);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeletingCanceled);
+
 DECLARE_LOG_CATEGORY_CLASS(LogBuildingComponent, Log, All)
 
-/**
- *
- */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class JCORE_API UBuildingComponent : public UActorComponent
 {
@@ -60,6 +61,9 @@ public:
     void ServerStartBuilding(TSubclassOf<AActor> ActorToBuild);
 
     UFUNCTION(Server, Reliable, BlueprintCallable)
+    void ServerStartBuildingFromRecipe(UBuildingRecipeDataAsset* RecipeDataAsset);
+
+    UFUNCTION(Server, Reliable, BlueprintCallable)
     void ServerStartBuildPreview(TSubclassOf<AActor> ActorToPreview);
 
     UFUNCTION(BlueprintCallable)
@@ -69,24 +73,39 @@ public:
     void ServerTryBuild();
 
     UFUNCTION(BlueprintCallable)
-    bool TryDelete();
+    void StartDeleting();
+
+    UFUNCTION(BlueprintCallable)
+    void CancelDeleting();
+
+    UFUNCTION(BlueprintCallable)
+    void FinishDeleting();
 
     UFUNCTION(BlueprintCallable)
     AActor* GetPreviouslyCompletedBuilding();
 
     UFUNCTION(BlueprintCallable)
-    void IncrementSelectedActorToSpawn();
+    void SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn);
 
     UFUNCTION(BlueprintCallable)
-    void SetActorClassToSpawn(TSubclassOf<AActor> InActorClassToSpawn);
+    void SetCurrentBuildingRecipe(UBuildingRecipeDataAsset* InBuildingRecipe);
 
     void AddCurrentBuildableOffset(FVector& InLocation) const;
 
     UFUNCTION(BlueprintCallable)
     void IncrementBuildingPreviewRotationAxis();
 
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    const FTimerHandle& GetDeleteTimerHandle() const;
+
     UPROPERTY(BlueprintAssignable)
     FOnCompletedBuilding OnCompletedBuilding;
+
+    UPROPERTY(BlueprintAssignable)
+    FOnDeletingStarted OnDeletingStarted;
+
+    UPROPERTY(BlueprintAssignable)
+    FOnDeletingCanceled OnDeletingCanceled;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
     TArray<TSubclassOf<AActor>> ActorClassesToSpawn;
@@ -148,6 +167,9 @@ protected:
     UPROPERTY(BlueprintReadOnly)
     TSubclassOf<ABuildable> CurrentBuildingClassInPreview;
 
+    UPROPERTY(BlueprintReadOnly)
+    UBuildingRecipeDataAsset* CurrentBuildingPreviewRecipe;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated)
     ABuildable* CurrentBuildingPreview;
 
@@ -183,6 +205,12 @@ protected:
     UPROPERTY(Transient)
     FRotator BuildingPreviewRotationOffset;
 
+    UPROPERTY()
+    float DeleteHoldTime;
+
+    UPROPERTY(EditAnywhere)
+    bool bRequireItemsToBuild;
+
 private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
 
@@ -193,4 +221,9 @@ private:
     const FVector GetGridLocation(const FVector& InLocation) const;
 
     const FTransform GetClosestConnectionTransform(const FVector &Location, const TArray<FTransform> &ConnectionTransforms);
+
+    TSubclassOf<ABuildable> GetCurrentRecipeBuildingClass() const;
+
+    UPROPERTY()
+    FTimerHandle DeleteTimerHandle;
 };

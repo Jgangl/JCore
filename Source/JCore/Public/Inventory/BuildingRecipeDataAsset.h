@@ -24,7 +24,7 @@ protected:
 
 public:
     UFUNCTION(BlueprintCallable)
-    TMap<UItemDataAsset*, int32> GetInItems() const { return InItems; }
+    const TMap<UItemDataAsset*, int32>& GetInItems() const { return InItems; }
 
     UFUNCTION(BlueprintCallable)
     UBuildingDataAsset* GetOutBuilding() const { return OutBuilding; }
