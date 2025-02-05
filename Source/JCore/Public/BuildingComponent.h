@@ -5,6 +5,7 @@
 #include "Net/UnrealNetwork.h"
 
 #include "BuildingPreview.h"
+#include "BuildingSnapType.h"
 #include "Inventory/BuildingRecipeDataAsset.h"
 
 #include "BuildingComponent.generated.h"
@@ -157,6 +158,8 @@ protected:
     virtual void HandleBuildingPreview(TArray<FHitResult>& OutHits);
 
     void IncrementBuildingPreviewSnapIndex();
+
+    const FTransform GetClosestBuildableSnapTransform(const FVector& Center, EBuildingSnapType SnapType) const;
 
     UPROPERTY(BlueprintReadOnly)
     FTransform ClientTargetTransform;

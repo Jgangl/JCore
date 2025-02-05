@@ -30,6 +30,12 @@ public:
     FString GetDisplayName() const;
 
     UFUNCTION(BlueprintCallable)
+    UStaticMeshComponent* GetStaticMeshComponent() const;
+
+    UFUNCTION(BlueprintCallable)
+    const FVector& GetSize() const;
+
+    UFUNCTION(BlueprintCallable)
     void SetMaterial(UMaterialInterface* NewMaterial);
 
     UFUNCTION(BlueprintCallable)
@@ -38,11 +44,16 @@ public:
     UFUNCTION(BlueprintCallable)
     void ResetMaterial();
 
+    UFUNCTION(BlueprintCallable)
+    bool RequiresOverlapCheck();
+
     const FVector& GetBuildingOffset() const;
 
     virtual void CompleteBuilding() override;
 
     virtual void GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) const override;
+
+    void GetNeighborSnapLocations(TArray<FVector>& OutSnapLocations);
 
     void SetIsPreviewing(bool InIsPreviewing);
 
@@ -94,6 +105,12 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
     UMaterialInterface* InvalidPreviewMaterial;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    bool bRequireOverlapCheck;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    FVector Size;
 
     UPROPERTY(EditAnywhere)
     TArray<UPipeConnectionComponent*> PipeConnectionComponents;

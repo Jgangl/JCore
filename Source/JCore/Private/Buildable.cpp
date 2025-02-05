@@ -14,8 +14,9 @@ ABuildable::ABuildable()
     this->StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh Component"));
     this->SetRootComponent(this->StaticMeshComponent);
 
-    this->bIsPreviewing   = false;
-    this->bValidPlacement = false;
+    this->bIsPreviewing        = false;
+    this->bValidPlacement      = false;
+    this->bRequireOverlapCheck = true;
 
     this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Block);
 
@@ -186,7 +187,7 @@ void ABuildable::Tick(float DeltaSeconds)
     }
 
     // Only update placement validity on server
-    if (this->bIsPreviewing)
+    if (this->bIsPreviewing && this->RequiresOverlapCheck())
     {
         this->UpdatePlacementValidity();
     }
@@ -195,6 +196,16 @@ void ABuildable::Tick(float DeltaSeconds)
 FString ABuildable::GetDisplayName() const
 {
     return this->DisplayName;
+}
+
+UStaticMeshComponent* ABuildable::GetStaticMeshComponent() const
+{
+    return this->StaticMeshComponent;
+}
+
+const FVector& ABuildable::GetSize() const
+{
+    return this->Size;
 }
 
 void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
@@ -231,6 +242,11 @@ void ABuildable::ResetMaterial()
 
         MeshComponent->SetOverlayMaterial(nullptr);
     }
+}
+
+bool ABuildable::RequiresOverlapCheck()
+{
+    return this->bRequireOverlapCheck;
 }
 
 const FVector& ABuildable::GetBuildingOffset() const
@@ -295,6 +311,11 @@ void ABuildable::GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) co
             OutSnapTransforms.Add(PipeConnectionComponent->GetPipeSnapTransform());
         }
     }
+}
+
+void ABuildable::GetNeighborSnapLocations(TArray<FVector>& OutSnapLocations)
+{
+
 }
 
 void ABuildable::SetIsPreviewing(bool InIsPreviewing)

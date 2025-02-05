@@ -411,9 +411,10 @@ void UBuildingComponent::ServerTryBuild_Implementation()
     }
 
     // Check placement validity
-    if (!BuildableToBuild->IsPlacementValid())
+    if (BuildableToBuild->RequiresOverlapCheck() && !BuildableToBuild->IsPlacementValid())
     {
         UE_LOG(LogTemp, Warning, TEXT("%hs : Building placement is invalid"), __FUNCTION__);
+        // TODO: Warning to player that attempted placement is invalid
         return;
     }
 
@@ -659,6 +660,12 @@ TSubclassOf<ABuildable> UBuildingComponent::GetCurrentRecipeBuildingClass() cons
 
 void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 {
+    if (!this->CurrentBuildingPreview)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : this->CurrentBuildingPreview is nullptr"), __FUNCTION__);
+        return;
+    }
+
     if (OutHits.Num() == 0)
     {
         return;
@@ -678,7 +685,7 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
         DrawDebugSphere(GetWorld(), GridLocation, 20.0f, 8, FColor::Green, false);
     }
 
-    FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), GridLocation, FVector::One());
+    FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), GridLocation, this->CurrentBuildingPreview->GetTransform().GetScale3D());
 
     bool bSnapping = false;
 
@@ -693,6 +700,49 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
             bSnapping = true;
         }
     }
+
+    // Floors
+    // Look for any buildables near current preview location
+    // Find if there are any snap locations near current preview location
+    // If current preview location is within a certain range, snap preview to location
+
+    // TODO: Fix snap location function to be snap transform since for walls, we need to rotate the snap points to match the snap points rotation
+
+    FTransform SnapTransform = this->GetClosestBuildableSnapTransform(HitLocation);
+
+    if (SnapTransform.Equals(FTransform::Identity))
+    {
+        // No snap locations found
+    }
+    else
+    {
+        TargetTransform.SetLocation(SnapTransform.GetLocation());
+        TargetTransform.SetRotation(SnapTransform.GetRotation());
+
+        this->ServerSetTargetTransform(TargetTransform);
+
+        return;
+    }
+
+
+/*
+    UStaticMeshComponent* HitStaticMeshComponent = Cast<UStaticMeshComponent>(TargetHitResult.GetComponent());
+
+    if(HitStaticMeshComponent && HitStaticMeshComponent->GetStaticMesh()->GetRenderData()->LODResources.Num() > 0)
+    {
+        FPositionVertexBuffer* VertexBuffer = &HitStaticMeshComponent->GetStaticMesh()->GetRenderData()->LODResources[0].VertexBuffers.PositionVertexBuffer;
+        if (VertexBuffer)
+        {
+            const int32 VertexCount = VertexBuffer->GetNumVertices();
+            for (int32 Index = 0;  Index < VertexCount; Index++ )
+            {
+                //This is in the Static Mesh Actor Class, so it is location and tranform of the SMActor
+                const FVector WorldSpaceVertexLocation = **GetActorLocation() + GetTransform().TransformVector(VertexBuffer->VertexPosition(Index));**
+                //add to output FVector array
+            }
+        }
+    }
+*/
 
     // TODO: Abstract this function into a utils class
     const FTransform ClosestTransform = this->GetClosestConnectionTransform(HitLocation, OutTargetBuildablePipeSnapTransforms);
@@ -774,6 +824,107 @@ void UBuildingComponent::IncrementBuildingPreviewSnapIndex()
     {
         this->BuildingPreviewSnapIndex = 0;
     }
+}
+
+const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVector& Center, EBuildingSnapType SnapType) const
+{
+    if (!this->CurrentBuildingPreview)
+    {
+        UE_LOG(LogTemp, Error, TEXT("%hs : this->CurrentBuildingPreview is nullptr"), __FUNCTION__);
+        return FTransform::Identity;
+    }
+
+    FVector BuildingPreviewOrigin;
+    FVector BuildingPreviewExtents;
+    this->CurrentBuildingPreview->GetActorBounds(false, BuildingPreviewOrigin, BuildingPreviewExtents, false);
+
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+
+    TArray<AActor*> ActorsToIgnore{this->CurrentBuildingPreview};
+
+    TArray<AActor*> OverlappingActors;
+    UKismetSystemLibrary::SphereOverlapActors(GetWorld(),
+                                              Center,
+                                              150.0f,
+                                              ObjectTypes,
+                                              ABuildable::StaticClass(),
+                                              ActorsToIgnore,
+                                              OverlappingActors);
+
+    DrawDebugSphere(GetWorld(), Center, 150.0f, 10, FColor::Blue);
+
+    TArray<FVector> PossibleSnapLocations;
+
+    for (AActor* OverlappedActor : OverlappingActors)
+    {
+        ABuildable* OverlappedBuildable = Cast<ABuildable>(OverlappedActor);
+        if (!OverlappedBuildable) continue;
+
+        FVector BuildableLocation = OverlappedBuildable->GetActorLocation();
+
+        const float TranslationX = this->CurrentBuildingPreview->GetSize().X / 2.0f + OverlappedBuildable->GetSize().X / 2.0f;
+        const float TranslationY = this->CurrentBuildingPreview->GetSize().Y / 2.0f + OverlappedBuildable->GetSize().Y / 2.0f;
+
+        FVector NorthSnapLocation = BuildableLocation + FVector(0.0f, TranslationY, 0.0f);
+        FVector SouthSnapLocation = BuildableLocation - FVector(0.0f, TranslationY, 0.0f);
+        FVector EastSnapLocation  = BuildableLocation + FVector(TranslationX, 0.0f, 0.0f);
+        FVector WestSnapLocation  = BuildableLocation - FVector(TranslationX, 0.0f, 0.0f);
+
+        // TODO: Check if snap location is 'available'
+
+        // Subtract 1 from size to avoid direct contact with neighboring buildables
+        // TODO: Fix how this is working, this doesn't work for both walls and floors
+        FVector OverlapCheckHalfExtents = (this->CurrentBuildingPreview->GetSize() - FVector(5.0f, 5.0f, 1.0f)) / 2.0f;
+
+        UE_LOG(LogTemp, Warning, TEXT("X: %f, Y: %f, Z: %f"), OverlapCheckHalfExtents.X, OverlapCheckHalfExtents.Y, OverlapCheckHalfExtents.Z);
+
+        DrawDebugBox(GetWorld(), NorthSnapLocation, OverlapCheckHalfExtents, FColor::Black);
+        DrawDebugBox(GetWorld(), SouthSnapLocation, OverlapCheckHalfExtents, FColor::Black);
+        DrawDebugBox(GetWorld(), EastSnapLocation, OverlapCheckHalfExtents, FColor::Black);
+        DrawDebugBox(GetWorld(), WestSnapLocation, OverlapCheckHalfExtents, FColor::Black);
+
+        TArray<AActor*> SnapOverlappingActors;
+        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), NorthSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
+        {
+            PossibleSnapLocations.Add(NorthSnapLocation);
+            DrawDebugSphere(GetWorld(), NorthSnapLocation, 20.0f, 10, FColor::Green);
+        }
+
+        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), SouthSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
+        {
+            PossibleSnapLocations.Add(SouthSnapLocation);
+            DrawDebugSphere(GetWorld(), SouthSnapLocation, 20.0f, 10, FColor::Green);
+        }
+
+        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), EastSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
+        {
+            PossibleSnapLocations.Add(EastSnapLocation);
+            DrawDebugSphere(GetWorld(), EastSnapLocation, 20.0f, 10, FColor::Green);
+        }
+
+        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), WestSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
+        {
+            PossibleSnapLocations.Add(WestSnapLocation);
+            DrawDebugSphere(GetWorld(), WestSnapLocation, 20.0f, 10, FColor::Green);
+        }
+    }
+
+    float ClosestSnapDistance   = 9999999999999999.0f;
+    FVector ClosestSnapLocation = FVector::Zero();
+
+    for (const FVector& PossibleSnapLocation : PossibleSnapLocations)
+    {
+        float CurrentSnapDistance = FVector::Distance(PossibleSnapLocation, Center);
+
+        if (CurrentSnapDistance < ClosestSnapDistance)
+        {
+            ClosestSnapLocation = PossibleSnapLocation;
+            ClosestSnapDistance = CurrentSnapDistance;
+        }
+    }
+
+    return ClosestSnapLocation;
 }
 
 void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)
