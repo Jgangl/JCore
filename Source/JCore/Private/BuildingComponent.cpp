@@ -344,6 +344,24 @@ void UBuildingComponent::IncrementBuildingPreviewRotationAxis()
     }
 }
 
+void UBuildingComponent::StartCopyBuilding()
+{
+    TArray<FHitResult> OutHits;
+    this->GetFirstPersonHitResults(OutHits);
+
+    if (OutHits.Num() == 0)
+    {
+        return;
+    }
+
+    if (ABuildable* BuildableUnderCursor = Cast<ABuildable>(OutHits[0].GetActor()))
+    {
+        const TSubclassOf<ABuildable> CopiedBuildableClass = BuildableUnderCursor->GetClass();
+
+        this->ServerStartBuilding(CopiedBuildableClass);
+    }
+}
+
 const FTimerHandle& UBuildingComponent::GetDeleteTimerHandle() const
 {
     return this->DeleteTimerHandle;
@@ -708,13 +726,9 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
     // TODO: Fix snap location function to be snap transform since for walls, we need to rotate the snap points to match the snap points rotation
 
-    FTransform SnapTransform = this->GetClosestBuildableSnapTransform(HitLocation);
+    FTransform SnapTransform = this->GetClosestBuildableSnapTransform(HitLocation, EBuildingSnapType::Wall);
 
-    if (SnapTransform.Equals(FTransform::Identity))
-    {
-        // No snap locations found
-    }
-    else
+    if (!SnapTransform.Equals(FTransform::Identity))
     {
         TargetTransform.SetLocation(SnapTransform.GetLocation());
         TargetTransform.SetRotation(SnapTransform.GetRotation());
@@ -723,7 +737,6 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
         return;
     }
-
 
 /*
     UStaticMeshComponent* HitStaticMeshComponent = Cast<UStaticMeshComponent>(TargetHitResult.GetComponent());
@@ -852,9 +865,20 @@ const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVec
                                               ActorsToIgnore,
                                               OverlappingActors);
 
-    DrawDebugSphere(GetWorld(), Center, 150.0f, 10, FColor::Blue);
+    if (this->bDebug)
+    {
+        DrawDebugSphere(GetWorld(), Center, 150.0f, 10, FColor::Blue);
+    }
 
-    TArray<FVector> PossibleSnapLocations;
+    // If snapping wall to a wall, then we only want to snap left/right, we probably want to match the rotation of the existing wall though
+    // If snapping wall to floor, then we want to snap all 4 directions but we need to rotate the wall snap points
+    // If snapping floor to floor, then we want to snap all 4 directions, we don't want to rotate
+    // If snapping floor to wall, then we want to snap all 4 directions, we don't want to rotate
+    // Don't rotate if we are building a floor.
+    // Rotate if we are building a wall and it's getting snapped to a floor
+
+    TArray<FTransform> PossibleSnapTransforms;
+    TArray<FTransform> AvailableSnapTransforms;
 
     for (AActor* OverlappedActor : OverlappingActors)
     {
@@ -863,68 +887,111 @@ const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVec
 
         FVector BuildableLocation = OverlappedBuildable->GetActorLocation();
 
-        const float TranslationX = this->CurrentBuildingPreview->GetSize().X / 2.0f + OverlappedBuildable->GetSize().X / 2.0f;
+        float TranslationX = this->CurrentBuildingPreview->GetSize().X / 2.0f + OverlappedBuildable->GetSize().X / 2.0f;
         const float TranslationY = this->CurrentBuildingPreview->GetSize().Y / 2.0f + OverlappedBuildable->GetSize().Y / 2.0f;
 
-        FVector NorthSnapLocation = BuildableLocation + FVector(0.0f, TranslationY, 0.0f);
-        FVector SouthSnapLocation = BuildableLocation - FVector(0.0f, TranslationY, 0.0f);
-        FVector EastSnapLocation  = BuildableLocation + FVector(TranslationX, 0.0f, 0.0f);
-        FVector WestSnapLocation  = BuildableLocation - FVector(TranslationX, 0.0f, 0.0f);
-
-        // TODO: Check if snap location is 'available'
-
-        // Subtract 1 from size to avoid direct contact with neighboring buildables
-        // TODO: Fix how this is working, this doesn't work for both walls and floors
-        FVector OverlapCheckHalfExtents = (this->CurrentBuildingPreview->GetSize() - FVector(5.0f, 5.0f, 1.0f)) / 2.0f;
-
-        UE_LOG(LogTemp, Warning, TEXT("X: %f, Y: %f, Z: %f"), OverlapCheckHalfExtents.X, OverlapCheckHalfExtents.Y, OverlapCheckHalfExtents.Z);
-
-        DrawDebugBox(GetWorld(), NorthSnapLocation, OverlapCheckHalfExtents, FColor::Black);
-        DrawDebugBox(GetWorld(), SouthSnapLocation, OverlapCheckHalfExtents, FColor::Black);
-        DrawDebugBox(GetWorld(), EastSnapLocation, OverlapCheckHalfExtents, FColor::Black);
-        DrawDebugBox(GetWorld(), WestSnapLocation, OverlapCheckHalfExtents, FColor::Black);
-
-        TArray<AActor*> SnapOverlappingActors;
-        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), NorthSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
+        // If we are snapping a wall to floor, the snap point should be directly on the edge of the floor
+        if (this->CurrentBuildingPreview->GetSnapType() == EBuildingSnapType::Wall &&
+            OverlappedBuildable->GetSnapType() == EBuildingSnapType::Floor)
         {
-            PossibleSnapLocations.Add(NorthSnapLocation);
-            DrawDebugSphere(GetWorld(), NorthSnapLocation, 20.0f, 10, FColor::Green);
+            TranslationX = OverlappedBuildable->GetSize().X / 2.0f;
         }
 
-        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), SouthSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
-        {
-            PossibleSnapLocations.Add(SouthSnapLocation);
-            DrawDebugSphere(GetWorld(), SouthSnapLocation, 20.0f, 10, FColor::Green);
-        }
+        TArray<FTransform> BuildableSnapTransforms;
+        OverlappedBuildable->GetSnapTransformsOfType(this->CurrentBuildingPreview->GetSnapType(), BuildableSnapTransforms);
 
-        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), EastSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
-        {
-            PossibleSnapLocations.Add(EastSnapLocation);
-            DrawDebugSphere(GetWorld(), EastSnapLocation, 20.0f, 10, FColor::Green);
-        }
+        PossibleSnapTransforms.Append(BuildableSnapTransforms);
 
-        if (!UKismetSystemLibrary::BoxOverlapActors(GetWorld(), WestSnapLocation, OverlapCheckHalfExtents, ObjectTypes, ABuildable::StaticClass(), ActorsToIgnore, SnapOverlappingActors))
+
+
+        // Can we put these snap transforms in the buildable itself in some sort of map like TMap<EBuildingSnapType, TArray<FTransform>>
+        // where we can query each buildable for its snap transforms instead of doing the below garbage that's awful
+        //FVector NorthSnapLocation = BuildableLocation + FVector(0.0f, TranslationY, 0.0f);
+        //FVector SouthSnapLocation = BuildableLocation - FVector(0.0f, TranslationY, 0.0f);
+        //FVector EastSnapLocation  = BuildableLocation + FVector(TranslationX, 0.0f, 0.0f);
+        //FVector WestSnapLocation  = BuildableLocation - FVector(TranslationX, 0.0f, 0.0f);
+
+        //FTransform NorthSnapTransform{NorthSnapLocation};
+        //FTransform SouthSnapTransform{SouthSnapLocation};
+        //FTransform EastSnapTransform{FRotator(0.0f, 90.0f, 0.0f), EastSnapLocation};
+        //FTransform WestSnapTransform{FRotator(0.0f, -90.0f, 0.0f), WestSnapLocation};
+/*
+        if (this->CurrentBuildingPreview->GetSnapType() == EBuildingSnapType::Wall &&
+            OverlappedBuildable->GetSnapType() == EBuildingSnapType::Wall)
         {
-            PossibleSnapLocations.Add(WestSnapLocation);
-            DrawDebugSphere(GetWorld(), WestSnapLocation, 20.0f, 10, FColor::Green);
+            PossibleSnapTransforms.Append({EastSnapTransform, WestSnapTransform});
+        }
+        else
+        {
+            PossibleSnapTransforms.Append({NorthSnapTransform, SouthSnapTransform, EastSnapTransform, WestSnapTransform});
+        }
+        */
+    }
+
+    // TODO: Put this in ABuildable as a property?
+    FVector OverlapCushion = this->CurrentBuildingPreview->GetSize() * 0.02f;
+    FVector OverlapCheckHalfExtents = (this->CurrentBuildingPreview->GetSize() - OverlapCushion) / 2.0f;
+
+    for (const FTransform& PossibleSnapTransform : PossibleSnapTransforms)
+    {
+        if (this->IsSnapPointAvailable(PossibleSnapTransform, OverlapCheckHalfExtents))
+        {
+            AvailableSnapTransforms.Add(PossibleSnapTransform);
         }
     }
 
-    float ClosestSnapDistance   = 9999999999999999.0f;
-    FVector ClosestSnapLocation = FVector::Zero();
+    float ClosestSnapDistance       = 9999999999999999.0f;
+    FTransform ClosestSnapTransform = FTransform::Identity;
 
-    for (const FVector& PossibleSnapLocation : PossibleSnapLocations)
+    // TODO: Move this into a utils class
+    for (const FTransform& PossibleSnapTransform : PossibleSnapTransforms)
     {
-        float CurrentSnapDistance = FVector::Distance(PossibleSnapLocation, Center);
+        float CurrentSnapDistance = FVector::Distance(PossibleSnapTransform.GetLocation(), Center);
 
         if (CurrentSnapDistance < ClosestSnapDistance)
         {
-            ClosestSnapLocation = PossibleSnapLocation;
+            ClosestSnapTransform = PossibleSnapTransform;
             ClosestSnapDistance = CurrentSnapDistance;
         }
     }
 
-    return ClosestSnapLocation;
+    return ClosestSnapTransform;
+}
+
+bool UBuildingComponent::IsSnapPointAvailable(const FTransform& SnapTransform, const FVector& Extents) const
+{
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+
+    const TArray<AActor*> ActorsToIgnore{this->CurrentBuildingPreview};
+
+    // Do we need to rotate the extents by the rotation in the SnapTransform?
+    const FVector RotatedExtents = Extents.RotateAngleAxis(SnapTransform.GetRotation().Euler().Z, FVector::UpVector);
+
+    // Walls origin is at the ground, we need to offset the box overlap check to compensate for this
+    //  Is there a better way to do this?
+    FVector SnapOverlapLocation = SnapTransform.GetLocation() + FVector(0.0f, 0.0f, this->CurrentBuildingPreview->GetSize().Z / 2.0f);
+
+    TArray<AActor*> SnapOverlappingActors;
+    bool bSnapPointOccupied = UKismetSystemLibrary::BoxOverlapActors(GetWorld(),
+                                                                     SnapOverlapLocation,
+                                                                     RotatedExtents,
+                                                                     ObjectTypes,
+                                                                     ABuildable::StaticClass(),
+                                                                     ActorsToIgnore,
+                                                                     SnapOverlappingActors);
+
+    if (this->bDebug)
+    {
+        DrawDebugBox(GetWorld(), SnapTransform.GetLocation(), RotatedExtents, FColor::Black);
+
+        if (bSnapPointOccupied)
+        {
+            DrawDebugSphere(GetWorld(), SnapTransform.GetLocation(), 20.0f, 10, FColor::Green);
+        }
+    }
+
+    return bSnapPointOccupied;
 }
 
 void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)

@@ -18,6 +18,11 @@ ABuildable::ABuildable()
     this->bValidPlacement      = false;
     this->bRequireOverlapCheck = true;
 
+    this->SnapType = EBuildingSnapType::Floor;
+
+    this->SnapTransforms.Add(EBuildingSnapType::Floor);
+    this->SnapTransforms.Add(EBuildingSnapType::Wall);
+
     this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Block);
 
     const FString ValidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_ValidBuildingPreview.M_ValidBuildingPreview'");
@@ -338,4 +343,39 @@ void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
 bool ABuildable::IsPlacementValid() const
 {
     return this->bValidPlacement;
+}
+
+EBuildingSnapType ABuildable::GetSnapType() const
+{
+    return this->SnapType;
+}
+
+void ABuildable::SetSnapTransformsOfType(EBuildingSnapType InSnapType, const TArray<FTransform>& InSnapTransforms)
+{
+    if (!this->SnapTransforms.Contains(InSnapType))
+    {
+        return;
+    }
+
+    this->SnapTransforms[InSnapType] = InSnapTransforms;
+}
+
+void ABuildable::GetSnapTransformsOfType(EBuildingSnapType InSnapType, TArray<FTransform>& OutSnapTransforms) const
+{
+    if (!this->SnapTransforms.Contains(InSnapType))
+    {
+        return;
+    }
+
+    // We need to add the actor location at runtime since the snap transforms are created in blueprints at construction time
+    TArray<FTransform> WorldSnapTransforms;
+    for (const FTransform LocalSnapTransform : this->SnapTransforms[InSnapType])
+    {
+        FTransform WorldSnapTransform = LocalSnapTransform;
+        WorldSnapTransform.SetLocation(LocalSnapTransform.GetLocation() + this->GetActorLocation());
+
+        WorldSnapTransforms.Add(WorldSnapTransform);
+    }
+
+    OutSnapTransforms = WorldSnapTransforms;
 }

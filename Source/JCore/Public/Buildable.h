@@ -6,6 +6,7 @@
 #include "Net/UnrealNetwork.h"
 
 #include "BuildableInterface.h"
+#include "BuildingSnapType.h"
 #include "SteamFactory/PipeConnectionComponent.h"
 
 #include "Buildable.generated.h"
@@ -61,6 +62,15 @@ public:
 
     bool IsPlacementValid() const;
 
+    UFUNCTION(BlueprintCallable)
+    EBuildingSnapType GetSnapType() const;
+
+    UFUNCTION(BlueprintCallable)
+    void SetSnapTransformsOfType(EBuildingSnapType InSnapType, const TArray<FTransform>& InSnapTransforms);
+
+    UFUNCTION(BlueprintCallable)
+    virtual void GetSnapTransformsOfType(EBuildingSnapType InSnapType, TArray<FTransform>& OutSnapTransforms) const;
+
 protected:
     virtual void BeginPlay() override;
 
@@ -111,6 +121,11 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FVector Size;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    EBuildingSnapType SnapType;
+
+    TMap<EBuildingSnapType, TArray<FTransform>> SnapTransforms;
 
     UPROPERTY(EditAnywhere)
     TArray<UPipeConnectionComponent*> PipeConnectionComponents;

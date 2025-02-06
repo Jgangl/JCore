@@ -96,6 +96,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void IncrementBuildingPreviewRotationAxis();
 
+    UFUNCTION(BlueprintCallable)
+    void StartCopyBuilding();
+
     UFUNCTION(BlueprintCallable, BlueprintPure)
     const FTimerHandle& GetDeleteTimerHandle() const;
 
@@ -160,6 +163,9 @@ protected:
     void IncrementBuildingPreviewSnapIndex();
 
     const FTransform GetClosestBuildableSnapTransform(const FVector& Center, EBuildingSnapType SnapType) const;
+
+    UFUNCTION(BlueprintCallable)
+    bool IsSnapPointAvailable(const FTransform& SnapTransform, const FVector& Extents) const;
 
     UPROPERTY(BlueprintReadOnly)
     FTransform ClientTargetTransform;

@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 
-UENUM()
+UENUM(BlueprintType)
 enum class EBuildingSnapType : uint8
 {
     Floor,
