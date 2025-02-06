@@ -885,51 +885,14 @@ const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVec
         ABuildable* OverlappedBuildable = Cast<ABuildable>(OverlappedActor);
         if (!OverlappedBuildable) continue;
 
-        FVector BuildableLocation = OverlappedBuildable->GetActorLocation();
-
-        float TranslationX = this->CurrentBuildingPreview->GetSize().X / 2.0f + OverlappedBuildable->GetSize().X / 2.0f;
-        const float TranslationY = this->CurrentBuildingPreview->GetSize().Y / 2.0f + OverlappedBuildable->GetSize().Y / 2.0f;
-
-        // If we are snapping a wall to floor, the snap point should be directly on the edge of the floor
-        if (this->CurrentBuildingPreview->GetSnapType() == EBuildingSnapType::Wall &&
-            OverlappedBuildable->GetSnapType() == EBuildingSnapType::Floor)
-        {
-            TranslationX = OverlappedBuildable->GetSize().X / 2.0f;
-        }
-
         TArray<FTransform> BuildableSnapTransforms;
         OverlappedBuildable->GetSnapTransformsOfType(this->CurrentBuildingPreview->GetSnapType(), BuildableSnapTransforms);
 
         PossibleSnapTransforms.Append(BuildableSnapTransforms);
-
-
-
-        // Can we put these snap transforms in the buildable itself in some sort of map like TMap<EBuildingSnapType, TArray<FTransform>>
-        // where we can query each buildable for its snap transforms instead of doing the below garbage that's awful
-        //FVector NorthSnapLocation = BuildableLocation + FVector(0.0f, TranslationY, 0.0f);
-        //FVector SouthSnapLocation = BuildableLocation - FVector(0.0f, TranslationY, 0.0f);
-        //FVector EastSnapLocation  = BuildableLocation + FVector(TranslationX, 0.0f, 0.0f);
-        //FVector WestSnapLocation  = BuildableLocation - FVector(TranslationX, 0.0f, 0.0f);
-
-        //FTransform NorthSnapTransform{NorthSnapLocation};
-        //FTransform SouthSnapTransform{SouthSnapLocation};
-        //FTransform EastSnapTransform{FRotator(0.0f, 90.0f, 0.0f), EastSnapLocation};
-        //FTransform WestSnapTransform{FRotator(0.0f, -90.0f, 0.0f), WestSnapLocation};
-/*
-        if (this->CurrentBuildingPreview->GetSnapType() == EBuildingSnapType::Wall &&
-            OverlappedBuildable->GetSnapType() == EBuildingSnapType::Wall)
-        {
-            PossibleSnapTransforms.Append({EastSnapTransform, WestSnapTransform});
-        }
-        else
-        {
-            PossibleSnapTransforms.Append({NorthSnapTransform, SouthSnapTransform, EastSnapTransform, WestSnapTransform});
-        }
-        */
     }
 
     // TODO: Put this in ABuildable as a property?
-    FVector OverlapCushion = this->CurrentBuildingPreview->GetSize() * 0.02f;
+    FVector OverlapCushion = this->CurrentBuildingPreview->GetSize() * 0.25f;
     FVector OverlapCheckHalfExtents = (this->CurrentBuildingPreview->GetSize() - OverlapCushion) / 2.0f;
 
     for (const FTransform& PossibleSnapTransform : PossibleSnapTransforms)
@@ -944,13 +907,13 @@ const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVec
     FTransform ClosestSnapTransform = FTransform::Identity;
 
     // TODO: Move this into a utils class
-    for (const FTransform& PossibleSnapTransform : PossibleSnapTransforms)
+    for (const FTransform& AvailableSnapTransform : AvailableSnapTransforms)
     {
-        float CurrentSnapDistance = FVector::Distance(PossibleSnapTransform.GetLocation(), Center);
+        float CurrentSnapDistance = FVector::Distance(AvailableSnapTransform.GetLocation(), Center);
 
         if (CurrentSnapDistance < ClosestSnapDistance)
         {
-            ClosestSnapTransform = PossibleSnapTransform;
+            ClosestSnapTransform = AvailableSnapTransform;
             ClosestSnapDistance = CurrentSnapDistance;
         }
     }
@@ -970,7 +933,7 @@ bool UBuildingComponent::IsSnapPointAvailable(const FTransform& SnapTransform, c
 
     // Walls origin is at the ground, we need to offset the box overlap check to compensate for this
     //  Is there a better way to do this?
-    FVector SnapOverlapLocation = SnapTransform.GetLocation() + FVector(0.0f, 0.0f, this->CurrentBuildingPreview->GetSize().Z / 2.0f);
+    FVector SnapOverlapLocation = SnapTransform.GetLocation() + this->CurrentBuildingPreview->GetOriginOffset();
 
     TArray<AActor*> SnapOverlappingActors;
     bool bSnapPointOccupied = UKismetSystemLibrary::BoxOverlapActors(GetWorld(),
@@ -983,15 +946,15 @@ bool UBuildingComponent::IsSnapPointAvailable(const FTransform& SnapTransform, c
 
     if (this->bDebug)
     {
-        DrawDebugBox(GetWorld(), SnapTransform.GetLocation(), RotatedExtents, FColor::Black);
+        DrawDebugBox(GetWorld(), SnapOverlapLocation, RotatedExtents, FColor::Black);
 
-        if (bSnapPointOccupied)
+        if (!bSnapPointOccupied)
         {
-            DrawDebugSphere(GetWorld(), SnapTransform.GetLocation(), 20.0f, 10, FColor::Green);
+            DrawDebugSphere(GetWorld(), SnapTransform.GetLocation(), 30.0f, 10, FColor::Green);
         }
     }
 
-    return bSnapPointOccupied;
+    return !bSnapPointOccupied;
 }
 
 void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)

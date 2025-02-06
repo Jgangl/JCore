@@ -37,6 +37,9 @@ public:
     const FVector& GetSize() const;
 
     UFUNCTION(BlueprintCallable)
+    const FVector& GetOriginOffset() const;
+
+    UFUNCTION(BlueprintCallable)
     void SetMaterial(UMaterialInterface* NewMaterial);
 
     UFUNCTION(BlueprintCallable)
@@ -103,6 +106,9 @@ protected:
 
     UPROPERTY(EditAnywhere)
     FVector BuildingOffset;
+
+    UPROPERTY(EditAnywhere)
+    FVector OriginOffset;
 
     UPROPERTY(ReplicatedUsing=OnRep_IsPreviewing)
     bool bIsPreviewing;

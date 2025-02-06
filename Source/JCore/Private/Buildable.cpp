@@ -213,6 +213,11 @@ const FVector& ABuildable::GetSize() const
     return this->Size;
 }
 
+const FVector& ABuildable::GetOriginOffset() const
+{
+    return this->OriginOffset;
+}
+
 void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
 {
     if (!NewMaterial)
