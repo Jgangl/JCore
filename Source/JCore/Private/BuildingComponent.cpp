@@ -4,6 +4,7 @@
 #include "BuildingComponent.h"
 
 #include "Buildable.h"
+#include "Inventory/BuildingSubsystem.h"
 #include "Inventory/InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -358,7 +359,15 @@ void UBuildingComponent::StartCopyBuilding()
     {
         const TSubclassOf<ABuildable> CopiedBuildableClass = BuildableUnderCursor->GetClass();
 
-        this->ServerStartBuilding(CopiedBuildableClass);
+        UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
+
+        ensure(GameInstance);
+
+        UBuildingSubsystem* BuildingSubsystem = GameInstance->GetSubsystem<UBuildingSubsystem>();
+
+        ensure(BuildingSubsystem);
+
+        this->ServerStartBuildingFromRecipe(BuildingSubsystem->GetRecipe(CopiedBuildableClass));
     }
 }
 
