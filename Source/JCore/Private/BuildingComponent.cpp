@@ -51,12 +51,14 @@ void UBuildingComponent::TickComponent(float DeltaTime,
 
     if (this->CurrentBuildingPreview)
     {
+        /*
         FVector LerpedLocation = FMath::VInterpTo(this->CurrentBuildingPreview->GetActorLocation(),
                                  this->ServerTargetTransform.GetLocation(),
                                  DeltaTime,
                                  this->BuildingPreviewInterpSpeed);
+        */
 
-        this->CurrentBuildingPreview->SetActorLocation(LerpedLocation);
+        this->CurrentBuildingPreview->SetActorLocation(this->ServerTargetTransform.GetLocation());
         this->CurrentBuildingPreview->SetActorRotation(this->ServerTargetTransform.GetRotation());
     }
 
@@ -702,7 +704,7 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
     FHitResult TargetHitResult           = OutHits[0];
     IBuildableInterface* TargetBuildable = Cast<IBuildableInterface>(TargetHitResult.GetActor());
 
-    FVector HitLocation  = TargetHitResult.Location;
+    FVector HitLocation  = TargetHitResult.ImpactPoint;
     FVector GridLocation = this->GetGridLocation(HitLocation);
     this->AddCurrentBuildableOffset(GridLocation);
 
@@ -712,7 +714,7 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
         DrawDebugSphere(GetWorld(), GridLocation, 20.0f, 8, FColor::Green, false);
     }
 
-    FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), GridLocation, this->CurrentBuildingPreview->GetTransform().GetScale3D());
+    FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), HitLocation, this->CurrentBuildingPreview->GetTransform().GetScale3D());
 
     bool bSnapping = false;
 
