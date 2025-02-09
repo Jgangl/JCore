@@ -4,6 +4,7 @@
 #include "BuildingComponent.h"
 
 #include "Buildable.h"
+#include "JCoreUtils.h"
 #include "Inventory/BuildingSubsystem.h"
 #include "Inventory/InventoryComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -650,26 +651,6 @@ const FVector UBuildingComponent::GetGridLocation(const FVector& InLocation) con
     return FVector(GridX, GridY, GridZ);
 }
 
-const FTransform UBuildingComponent::GetClosestConnectionTransform(const FVector &Location, const TArray<FTransform> &ConnectionTransforms)
-{
-    float ClosestSnapLocationDistance = 10000000.0f;
-    FTransform ClosestTransform = FTransform();
-
-    // Get closest snap location
-    for (const FTransform SnapTransform : ConnectionTransforms)
-    {
-        const float Distance = FVector::Distance(Location, SnapTransform.GetLocation());
-
-        if (Distance < ClosestSnapLocationDistance)
-        {
-            ClosestTransform            = SnapTransform;
-            ClosestSnapLocationDistance = Distance;
-        }
-    }
-
-    return ClosestTransform;
-}
-
 TSubclassOf<ABuildable> UBuildingComponent::GetCurrentRecipeBuildingClass() const
 {
     if (!this->CurrentBuildingPreviewRecipe)
@@ -730,46 +711,23 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
         }
     }
 
-    // Floors
-    // Look for any buildables near current preview location
-    // Find if there are any snap locations near current preview location
-    // If current preview location is within a certain range, snap preview to location
-
-    // TODO: Fix snap location function to be snap transform since for walls, we need to rotate the snap points to match the snap points rotation
-
-    FTransform SnapTransform = this->GetClosestBuildableSnapTransform(HitLocation, EBuildingSnapType::Wall);
-
-    if (!SnapTransform.Equals(FTransform::Identity))
+    if (this->CurrentBuildingPreview->GetSnapType() == EBuildingSnapType::Wall ||
+        this->CurrentBuildingPreview->GetSnapType() == EBuildingSnapType::Floor)
     {
-        TargetTransform.SetLocation(SnapTransform.GetLocation());
-        TargetTransform.SetRotation(SnapTransform.GetRotation());
+        FTransform SnapTransform = this->GetClosestBuildableSnapTransform(HitLocation, EBuildingSnapType::Wall);
 
-        this->ServerSetTargetTransform(TargetTransform);
-
-        return;
-    }
-
-/*
-    UStaticMeshComponent* HitStaticMeshComponent = Cast<UStaticMeshComponent>(TargetHitResult.GetComponent());
-
-    if(HitStaticMeshComponent && HitStaticMeshComponent->GetStaticMesh()->GetRenderData()->LODResources.Num() > 0)
-    {
-        FPositionVertexBuffer* VertexBuffer = &HitStaticMeshComponent->GetStaticMesh()->GetRenderData()->LODResources[0].VertexBuffers.PositionVertexBuffer;
-        if (VertexBuffer)
+        if (!SnapTransform.Equals(FTransform::Identity))
         {
-            const int32 VertexCount = VertexBuffer->GetNumVertices();
-            for (int32 Index = 0;  Index < VertexCount; Index++ )
-            {
-                //This is in the Static Mesh Actor Class, so it is location and tranform of the SMActor
-                const FVector WorldSpaceVertexLocation = **GetActorLocation() + GetTransform().TransformVector(VertexBuffer->VertexPosition(Index));**
-                //add to output FVector array
-            }
+            TargetTransform.SetLocation(SnapTransform.GetLocation());
+            TargetTransform.SetRotation(SnapTransform.GetRotation());
+
+            this->ServerSetTargetTransform(TargetTransform);
+
+            return;
         }
     }
-*/
 
-    // TODO: Abstract this function into a utils class
-    const FTransform ClosestTransform = this->GetClosestConnectionTransform(HitLocation, OutTargetBuildablePipeSnapTransforms);
+    const FTransform ClosestTransform = JCoreUtils::GetClosestTransformToPoint(HitLocation, OutTargetBuildablePipeSnapTransforms);
 
     FRotator OppositeRotatorWorld = (ClosestTransform.GetLocation() + ClosestTransform.GetUnitAxis(EAxis::X) * -50.0f - ClosestTransform.GetLocation()).Rotation();
 
@@ -914,22 +872,7 @@ const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVec
         }
     }
 
-    float ClosestSnapDistance       = 9999999999999999.0f;
-    FTransform ClosestSnapTransform = FTransform::Identity;
-
-    // TODO: Move this into a utils class
-    for (const FTransform& AvailableSnapTransform : AvailableSnapTransforms)
-    {
-        float CurrentSnapDistance = FVector::Distance(AvailableSnapTransform.GetLocation(), Center);
-
-        if (CurrentSnapDistance < ClosestSnapDistance)
-        {
-            ClosestSnapTransform = AvailableSnapTransform;
-            ClosestSnapDistance = CurrentSnapDistance;
-        }
-    }
-
-    return ClosestSnapTransform;
+    return JCoreUtils::GetClosestTransformToPoint(Center, AvailableSnapTransforms);
 }
 
 bool UBuildingComponent::IsSnapPointAvailable(const FTransform& SnapTransform, const FVector& Extents) const

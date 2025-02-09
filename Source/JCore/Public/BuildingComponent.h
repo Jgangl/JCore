@@ -229,8 +229,6 @@ private:
 
     const FVector GetGridLocation(const FVector& InLocation) const;
 
-    const FTransform GetClosestConnectionTransform(const FVector &Location, const TArray<FTransform> &ConnectionTransforms);
-
     TSubclassOf<ABuildable> GetCurrentRecipeBuildingClass() const;
 
     UPROPERTY()
