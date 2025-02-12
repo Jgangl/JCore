@@ -372,12 +372,15 @@ void ABuildable::GetSnapTransformsOfType(EBuildingSnapType InSnapType, TArray<FT
         return;
     }
 
-    // We need to add the actor location at runtime since the snap transforms are created in blueprints at construction time
     TArray<FTransform> WorldSnapTransforms;
     for (const FTransform LocalSnapTransform : this->SnapTransforms[InSnapType])
     {
+        const FQuat WorldQuat  = this->GetTransform().TransformRotation(LocalSnapTransform.GetRotation());
+        const FVector WorldLoc = this->GetTransform().TransformPosition(LocalSnapTransform.GetLocation());
+
         FTransform WorldSnapTransform = LocalSnapTransform;
-        WorldSnapTransform.SetLocation(LocalSnapTransform.GetLocation() + this->GetActorLocation());
+        WorldSnapTransform.SetLocation(WorldLoc);
+        WorldSnapTransform.SetRotation(WorldQuat);
 
         WorldSnapTransforms.Add(WorldSnapTransform);
     }

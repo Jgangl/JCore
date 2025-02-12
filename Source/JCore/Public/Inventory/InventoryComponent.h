@@ -40,6 +40,9 @@ public:
     UFUNCTION(BlueprintCallable)
     bool TryAddItem(UItemDataAsset* ItemToAdd, const int Amount = 1);
 
+    UFUNCTION(BlueprintCallable)
+    bool TryAddItems(const TMap<UItemDataAsset*, int32> &ItemsToAdd);
+
     UFUNCTION(Server, BlueprintCallable, Reliable)
     void ServerAddItem(UItemDataAsset* ItemToAdd, const int Amount = 1);
 
@@ -52,7 +55,7 @@ public:
 
     /** Removes the given items and amounts. *MUST BE CALLED ON SERVER* */
     UFUNCTION(BlueprintCallable)
-    bool TryRemoveGivenItems(const TMap<UItemDataAsset*, int32> &ItemsToRemove);
+    bool TryRemoveItems(const TMap<UItemDataAsset*, int32> &ItemsToRemove);
 
     /** Removes item at the given index. *MUST BE CALLED ON SERVER* */
     UFUNCTION(BlueprintCallable)

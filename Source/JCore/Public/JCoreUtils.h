@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/GameplayStatics.h"
 
 class JCoreUtils
 {
@@ -10,4 +11,13 @@ public:
 
     /** Return FTransform closest to the TargetLocation from the given InTransforms, in world space. */
     static const FTransform GetClosestTransformToPoint(const FVector &TargetLocation, const TArray<FTransform> &InTransforms);
+
+    template <typename TSubsystemClass>
+    static TSubsystemClass* GetSubsystem(UWorld* InWorld)
+    {
+        UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(InWorld);
+        ensure(GameInstance);
+
+        return GameInstance->GetSubsystem<TSubsystemClass>();
+    }
 };

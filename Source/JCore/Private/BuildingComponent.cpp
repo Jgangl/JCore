@@ -41,6 +41,8 @@ UBuildingComponent::UBuildingComponent()
 
     this->bRequireItemsToBuild = true;
 
+    this->PipeBuildModeState = EPipeBuildModeState::None;
+
     this->SetIsReplicatedByDefault(true);
 }
 
@@ -94,6 +96,12 @@ void UBuildingComponent::TickComponent(float DeltaTime,
     if (this->bInDeleteMode)
     {
         this->HandleDeleteMode(OutHits);
+        return;
+    }
+
+    if (this->PipeBuildModeState == EPipeBuildModeState::InProcess)
+    {
+        // TODO: Find a pipe path from initial point to current end point, dynamically add/remove pipes
         return;
     }
 
@@ -206,8 +214,7 @@ void UBuildingComponent::RotateBuildObject(bool bClockwise)
     }
 
     FRotator DeltaRotation;
-    float RotationAmount = bClockwise ? this->RotationGridSnapValue :
-                                        -this->RotationGridSnapValue;
+    const float RotationAmount = bClockwise ? this->RotationGridSnapValue : -this->RotationGridSnapValue;
 
     if (this->bIsSnapping)
     {
@@ -259,8 +266,7 @@ void UBuildingComponent::SetDeleteMode(bool InDeleteMode)
 
             if (this->LocalHoveringBuildableActor)
             {
-                ABuildable* PreviousHoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor);
-                if (PreviousHoveringBuildable)
+                if (ABuildable* PreviousHoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor))
                 {
                     PreviousHoveringBuildable->ResetMaterial();
                 }
@@ -362,12 +368,7 @@ void UBuildingComponent::StartCopyBuilding()
     {
         const TSubclassOf<ABuildable> CopiedBuildableClass = BuildableUnderCursor->GetClass();
 
-        UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
-
-        ensure(GameInstance);
-
-        UBuildingSubsystem* BuildingSubsystem = GameInstance->GetSubsystem<UBuildingSubsystem>();
-
+        UBuildingSubsystem* BuildingSubsystem = JCoreUtils::GetSubsystem<UBuildingSubsystem>(GetWorld());
         ensure(BuildingSubsystem);
 
         this->ServerStartBuildingFromRecipe(BuildingSubsystem->GetRecipe(CopiedBuildableClass));
@@ -485,11 +486,26 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         }
 
         // Remove items from inventory
-        if (!PlayerInventory->TryRemoveGivenItems(this->CurrentBuildingPreviewRecipe->GetInItems()))
+        if (!PlayerInventory->TryRemoveItems(this->CurrentBuildingPreviewRecipe->GetInItems()))
         {
             UE_LOG(LogBuildingComponent, Warning, TEXT("ServerTryBuild : Removing items failed, this is not good, should be fixed if this is reached"));
             return;
         }
+    }
+
+    // We need to update the pipe build mode state.
+    if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
+        this->PipeBuildModeState == EPipeBuildModeState::None)
+    {
+        this->PipeBuildModeState = EPipeBuildModeState::InProcess;
+        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
+
+        return;
+    }
+    else if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
+             this->PipeBuildModeState == EPipeBuildModeState::InProcess)
+    {
+        this->PipeBuildModeState = EPipeBuildModeState::None;
     }
 
     this->ClearBuildingPreview(false);
@@ -548,10 +564,45 @@ void UBuildingComponent::FinishDeleting()
     }
 
     UWorld* World = GetWorld();
-
     if (!World) return;
 
     World->GetTimerManager().ClearTimer(this->DeleteTimerHandle);
+
+    if (this->bRequireItemsToBuild)
+    {
+        AActor* Owner = GetOwner();
+
+        if (!Owner)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%hs : Owner is nullptr"), __FUNCTION__);
+            return;
+        }
+
+        UInventoryComponent* PlayerInventory = Cast<UInventoryComponent>(Owner->GetComponentByClass(UInventoryComponent::StaticClass()));
+
+        if (!PlayerInventory)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%hs : PlayerInventory was not found on Owner"), __FUNCTION__);
+            return;
+        }
+
+        UBuildingSubsystem* BuildingSubsystem = JCoreUtils::GetSubsystem<UBuildingSubsystem>(GetWorld());
+        ensure(BuildingSubsystem);
+
+        UBuildingRecipeDataAsset* Recipe = BuildingSubsystem->GetRecipe(this->BuildableHoveringToDelete->GetClass());
+        if (!Recipe)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%hs : Recipe was not found"), __FUNCTION__);
+            return;
+        }
+
+        // Add items back to inventory
+        if (!PlayerInventory->TryAddItems(Recipe->GetInItems()))
+        {
+            UE_LOG(LogBuildingComponent, Warning, TEXT("ServerTryBuild : Adding items failed. Most likely due to full inventory."));
+            return;
+        }
+    }
 
     this->BuildableHoveringToDelete->Destroy();
     this->BuildableHoveringToDelete = nullptr;

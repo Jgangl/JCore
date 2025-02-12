@@ -174,6 +174,19 @@ bool UInventoryComponent::TryAddItem(UItemDataAsset* ItemToAdd, const int Amount
     return false;
 }
 
+bool UInventoryComponent::TryAddItems(const TMap<UItemDataAsset*, int32>& ItemsToAdd)
+{
+    for (const TTuple<UItemDataAsset*, int> ItemToAdd : ItemsToAdd)
+    {
+        if (!this->TryAddItem(ItemToAdd.Key, ItemToAdd.Value))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void UInventoryComponent::ServerAddItem_Implementation(UItemDataAsset* ItemToAdd, const int Amount)
 {
     if (!ItemToAdd)
@@ -262,7 +275,7 @@ bool UInventoryComponent::TryRemoveItem(UItemDataAsset* ItemToRemove, int Amount
     return true;
 }
 
-bool UInventoryComponent::TryRemoveGivenItems(const TMap<UItemDataAsset*, int32>& ItemsToRemove)
+bool UInventoryComponent::TryRemoveItems(const TMap<UItemDataAsset*, int32>& ItemsToRemove)
 {
     if (!this->ContainsGivenItems(ItemsToRemove))
     {

@@ -18,6 +18,14 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeletingCanceled);
 
 DECLARE_LOG_CATEGORY_CLASS(LogBuildingComponent, Log, All)
 
+UENUM(BlueprintType)
+enum class EPipeBuildModeState : uint8
+{
+    None,
+    Initial,
+    InProcess
+};
+
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class JCORE_API UBuildingComponent : public UActorComponent
 {
@@ -219,6 +227,18 @@ protected:
 
     UPROPERTY(EditAnywhere)
     bool bRequireItemsToBuild;
+
+    UPROPERTY(EditAnywhere)
+    bool bInPipeBuildMode;
+
+    UPROPERTY(EditAnywhere)
+    EPipeBuildModeState PipeBuildModeState;
+
+    // Pipe Building Process Steps:
+    //  1. Left mouse button down (click) starts pipe building
+    //  2. Aim cursor at desired pipe end location
+    //  3. Pipe will find the closest grid location to end location
+    //  4. Left mouse button down (click) completes current pipe building
 
 private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
