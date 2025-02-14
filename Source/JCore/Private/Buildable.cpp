@@ -342,6 +342,9 @@ void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
         if (!MeshComponent) continue;
 
         MeshComponent->SetCollisionProfileName(InCollisionProfileName);
+        // This is necessary for Instanced static mesh components to properly generate their collision
+        // after building for some reason
+        MeshComponent->RecreatePhysicsState();
     }
 }
 

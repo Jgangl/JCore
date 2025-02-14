@@ -234,6 +234,9 @@ protected:
     UPROPERTY(EditAnywhere)
     EPipeBuildModeState PipeBuildModeState;
 
+    UPROPERTY(Transient)
+    FVector InitialPipeBuildLocation;
+
     // Pipe Building Process Steps:
     //  1. Left mouse button down (click) starts pipe building
     //  2. Aim cursor at desired pipe end location

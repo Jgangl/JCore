@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "SteamFactory/SteamPipe_Instanced.h"
 
 UBuildingComponent::UBuildingComponent()
 {
@@ -102,6 +103,89 @@ void UBuildingComponent::TickComponent(float DeltaTime,
     if (this->PipeBuildModeState == EPipeBuildModeState::InProcess)
     {
         // TODO: Find a pipe path from initial point to current end point, dynamically add/remove pipes
+
+        TArray<FTransform> StraightPipeTransforms;
+        TArray<FTransform> CornerPipeTransforms;
+
+        FVector EndPipeLocation = this->GetGridLocation(OutHits[0].Location);
+        FVector LocDifference   = EndPipeLocation - this->InitialPipeBuildLocation;
+
+        int NumXGridPoints = FMath::Abs(LocDifference.X) / this->GridTileSizeX;
+        int NumZGridPoints = FMath::Abs(LocDifference.Z) / this->GridTileSizeZ;
+        int NumYGridPoints = FMath::Abs(LocDifference.Y) / this->GridTileSizeY;
+
+        FVector StartGridLoc = this->InitialPipeBuildLocation;
+
+        for (int i = 0; i < NumXGridPoints; i++)
+        {
+            FVector GridLoc = StartGridLoc;
+            GridLoc.X += i * this->GridTileSizeX * FMath::Sign(LocDifference.X);
+
+            StraightPipeTransforms.Add(FTransform(GridLoc));
+
+            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Turquoise);
+        }
+
+        for (int i = 1; i < NumYGridPoints; i++)
+        {
+            FVector GridLoc = this->InitialPipeBuildLocation;
+            GridLoc.X += NumXGridPoints * this->GridTileSizeX * FMath::Sign(LocDifference.X);
+            GridLoc.Y += i * this->GridTileSizeY * FMath::Sign(LocDifference.Y);
+
+            StraightPipeTransforms.Add(FTransform(FRotator(0.0f, 90.0f, 0.0f), GridLoc));
+
+            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Turquoise);
+        }
+
+        // Add corner
+        if (NumYGridPoints >= 1)
+        {
+            FVector GridLoc = this->InitialPipeBuildLocation;
+            GridLoc.X += NumXGridPoints * this->GridTileSizeX * FMath::Sign(LocDifference.X);
+
+            const float CornerRoll = FMath::IsNearlyEqual(FMath::Sign(LocDifference.Y), -1.0f) ? 0.0f : 180.0f;
+            const FRotator LookAtRotation = FRotator(0.0f, 180.0f, CornerRoll);
+
+            CornerPipeTransforms.Add(FTransform(LookAtRotation, GridLoc));
+
+            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Purple);
+        }
+
+        for (int i = 1; i < NumZGridPoints; i++)
+        {
+            FVector GridLoc = this->InitialPipeBuildLocation;
+            GridLoc.X += NumXGridPoints * this->GridTileSizeX * FMath::Sign(LocDifference.X);
+            GridLoc.Y += NumYGridPoints * this->GridTileSizeY * FMath::Sign(LocDifference.Y);
+            GridLoc.Z += i * this->GridTileSizeZ * FMath::Sign(LocDifference.Z);
+
+            StraightPipeTransforms.Add(FTransform(FRotator(90.0f, 0.0f, 0.0f), GridLoc));;
+
+            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Turquoise);
+        }
+
+        // Add corner
+        if (NumZGridPoints >= 1)
+        {
+            FVector GridLoc = this->InitialPipeBuildLocation;
+            GridLoc.X += NumXGridPoints * this->GridTileSizeX * FMath::Sign(LocDifference.X);
+            GridLoc.Y += NumYGridPoints * this->GridTileSizeY * FMath::Sign(LocDifference.Y);
+
+            // TODO: Calculate corner rotation
+
+            const float CornerRoll = FMath::IsNearlyEqual(FMath::Sign(LocDifference.Z), -1.0f) ? 90.0f : -90.0f;
+            const FRotator LookAtRotation = FRotator(0.0f, 180.0f, CornerRoll);
+
+            CornerPipeTransforms.Add(FTransform(LookAtRotation, GridLoc));
+
+            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Purple);
+        }
+
+        if (ASteamPipe_Instanced* SteamPipe_Instanced = Cast<ASteamPipe_Instanced>(this->CurrentBuildingPreview))
+        {
+            SteamPipe_Instanced->SetStraightInstanceTransforms(StraightPipeTransforms);
+            SteamPipe_Instanced->SetCornerInstanceTransforms(CornerPipeTransforms);
+        }
+
         return;
     }
 
@@ -144,6 +228,8 @@ void UBuildingComponent::ServerCancelBuilding_Implementation()
 {
     this->SetBuildMode(false);
     this->ClearBuildingPreview(true);
+
+    this->PipeBuildModeState = EPipeBuildModeState::None;
 }
 
 void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
@@ -500,12 +586,17 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         this->PipeBuildModeState = EPipeBuildModeState::InProcess;
         BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
 
+        // Save initial position to be able to calculate a path from
+        this->InitialPipeBuildLocation = this->GetGridLocation(BuildableToBuild->GetActorLocation());
+
         return;
     }
     else if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
              this->PipeBuildModeState == EPipeBuildModeState::InProcess)
     {
         this->PipeBuildModeState = EPipeBuildModeState::None;
+
+        this->InitialPipeBuildLocation = FVector::Zero();
     }
 
     this->ClearBuildingPreview(false);
