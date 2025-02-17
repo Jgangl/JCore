@@ -53,5 +53,4 @@ protected:
 
     UPROPERTY()
     TObjectPtr<UJCoreSaveGame> CurrentSaveGame;
-
 };

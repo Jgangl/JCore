@@ -20,6 +20,7 @@ UBuildingComponent::UBuildingComponent()
     this->BuildingPreviewInterpSpeed = 25.0f;
     this->bInDeleteMode              = false;
     this->bInBuildMode               = false;
+    this->bBuildOnWorldGrid          = false;
 
     this->GridTileSizeX = 100.0f;
     this->GridTileSizeY = 100.0f;
@@ -99,7 +100,7 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         this->HandleDeleteMode(OutHits);
         return;
     }
-
+/*
     if (this->PipeBuildModeState == EPipeBuildModeState::InProcess)
     {
         // TODO: Find a pipe path from initial point to current end point, dynamically add/remove pipes
@@ -188,7 +189,7 @@ void UBuildingComponent::TickComponent(float DeltaTime,
 
         return;
     }
-
+*/
     if (this->CurrentBuildingPreview)
     {
         this->HandleBuildingPreview(OutHits);
@@ -381,6 +382,11 @@ void UBuildingComponent::SetBuildMode(bool InBuildMode)
             this->SetDeleteMode(false);
         }
     }
+}
+
+void UBuildingComponent::SetBuildOnWorldGrid(bool InBuildOnWorldGrid)
+{
+    this->bBuildOnWorldGrid = InBuildOnWorldGrid;
 }
 
 void UBuildingComponent::ServerStartBuilding_Implementation(TSubclassOf<AActor> ActorToBuild)
@@ -578,7 +584,7 @@ void UBuildingComponent::ServerTryBuild_Implementation()
             return;
         }
     }
-
+/*
     // We need to update the pipe build mode state.
     if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
         this->PipeBuildModeState == EPipeBuildModeState::None)
@@ -598,7 +604,7 @@ void UBuildingComponent::ServerTryBuild_Implementation()
 
         this->InitialPipeBuildLocation = FVector::Zero();
     }
-
+*/
     this->ClearBuildingPreview(false);
 
     BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
@@ -823,9 +829,8 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
         return;
     }
 
-    // TODO: Get hit result different to the 1st one in array
     FHitResult TargetHitResult           = OutHits[0];
-    IBuildableInterface* TargetBuildable = Cast<IBuildableInterface>(TargetHitResult.GetActor());
+    IBuildableInterface* BuildableUnderCursor = Cast<IBuildableInterface>(TargetHitResult.GetActor());
 
     FVector HitLocation  = TargetHitResult.ImpactPoint;
     FVector GridLocation = this->GetGridLocation(HitLocation);
@@ -839,17 +844,22 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
     FTransform TargetTransform(this->ClientTargetTransform.GetRotation(), HitLocation, this->CurrentBuildingPreview->GetTransform().GetScale3D());
 
-    bool bSnapping = false;
+    if (this->bBuildOnWorldGrid)
+    {
+        TargetTransform.SetLocation(GridLocation);
+    }
+
+    bool bSnapToPipe = false;
 
     TArray<FTransform> OutTargetBuildablePipeSnapTransforms;
 
-    if (TargetBuildable)
+    if (BuildableUnderCursor)
     {
-        TargetBuildable->GetPipeSnapTransforms(OutTargetBuildablePipeSnapTransforms);
+        BuildableUnderCursor->GetPipeSnapTransforms(OutTargetBuildablePipeSnapTransforms);
 
         if (OutTargetBuildablePipeSnapTransforms.Num() > 0)
         {
-            bSnapping = true;
+            bSnapToPipe = true;
         }
     }
 
@@ -876,7 +886,7 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
     TArray<FTransform> OutBuildingPreviewSnapTransforms;
     this->CurrentBuildingPreview->GetPipeSnapTransforms(OutBuildingPreviewSnapTransforms);
 
-    if (bSnapping && OutBuildingPreviewSnapTransforms.Num() > 0)
+    if (bSnapToPipe && OutBuildingPreviewSnapTransforms.Num() > 0)
     {
         this->bIsSnapping = true;
 

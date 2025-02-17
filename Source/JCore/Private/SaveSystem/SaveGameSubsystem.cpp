@@ -86,22 +86,29 @@ void USaveGameSubsystem::SetSlotName(FString NewSlotName)
 
 void USaveGameSubsystem::WriteSaveGame()
 {
+    if (!this->CurrentSaveGame)
+    {
+        this->CurrentSaveGame = Cast<UJCoreSaveGame>(UGameplayStatics::CreateSaveGameObject(UJCoreSaveGame::StaticClass()));
+
+        UE_LOG(LogTemp, Warning, TEXT("Created New SaveGame Data."));
+    }
+
     // Clear arrays, may contain data from previously loaded SaveGame
     this->CurrentSaveGame->SavedPlayers.Empty();
     this->CurrentSaveGame->SavedActors.Empty();
     //CurrentSaveGame->DeletedActors.Empty();
 
-    AGameStateBase* GS = GetWorld()->GetGameState();
-    if (GS == nullptr)
+    AGameStateBase* GameState = GetWorld()->GetGameState();
+    if (GameState == nullptr)
     {
         // Warn about failure to save?
         return;
     }
 
     // Iterate all player states, we don't have proper ID to match yet (requires Steam or EOS)
-    for (int32 i = 0; i < GS->PlayerArray.Num(); i++)
+    for (int32 i = 0; i < GameState->PlayerArray.Num(); i++)
     {
-        AJCorePlayerState* PS = Cast<AJCorePlayerState>(GS->PlayerArray[i]);
+        AJCorePlayerState* PS = Cast<AJCorePlayerState>(GameState->PlayerArray[i]);
         if (PS)
         {
             UE_LOG(LogTemp, Warning, TEXT("Save player state"));
@@ -152,10 +159,11 @@ void USaveGameSubsystem::LoadSaveGame(FString InSlotName /*= ""*/)
 
     if (UGameplayStatics::DoesSaveGameExist(CurrentSlotName, 0))
     {
+        UE_LOG(LogTemp, Warning, TEXT("Found save game data"));
+
         this->CurrentSaveGame = Cast<UJCoreSaveGame>(UGameplayStatics::LoadGameFromSlot(CurrentSlotName, 0));
         if (this->CurrentSaveGame == nullptr)
         {
-            //UE_LOGFMT(LogGame, Warning, "Failed to load SaveGame Data.");
             UE_LOG(LogTemp, Error, TEXT("Failed to load SaveGame Data"))
             return;
         }
@@ -167,8 +175,6 @@ void USaveGameSubsystem::LoadSaveGame(FString InSlotName /*= ""*/)
         // Iterate the entire world of actors
         for (FActorIterator It(GetWorld()); It; ++It)
         {
-
-
             AActor* Actor = *It;
             UE_LOG(LogTemp, Warning, TEXT("Actor: %s"), *Actor->GetName());
             // Only interested in our 'gameplay actors'
@@ -237,15 +243,22 @@ void USaveGameSubsystem::LoadSaveGame(FString InSlotName /*= ""*/)
 
         for (FActorSaveData ActorData : this->CurrentSaveGame->SavedActors)
         {
-            //LOG_WARN("Saved actor: %s", *ActorData.ActorName.ToString())
-            if (LoadedActors.Contains(ActorData))
+            AActor* SpawnedActor = GetWorld()->SpawnActor(ActorData.ActorClass, &ActorData.Transform);
+
+            if (!SpawnedActor)
             {
-                //LOG_WARN("Loaded actors already contains")
+                UE_LOG(LogTemp, Error, TEXT("Failed to spawn actor {%s} from save"), *ActorData.ActorName.ToString());
+                continue;
             }
 
-            // Need to spawn
-            //LOG_WARN("Need to spawn: %s", *ActorData.ActorName.ToString())
-            //GetWorld()->SpawnActor(ActorData.ActorClass, &ActorData.Transform);
+            FMemoryReader MemReader(ActorData.ByteData);
+
+            FObjectAndNameAsStringProxyArchive Ar(MemReader, true);
+            Ar.ArIsSaveGame = true;
+            // Convert binary array back into actor's variables
+            SpawnedActor->Serialize(Ar);
+
+            ISaveableObjectInterface::Execute_OnActorLoaded(SpawnedActor);
         }
 
         this->OnSaveGameLoaded.Broadcast(this->CurrentSaveGame);

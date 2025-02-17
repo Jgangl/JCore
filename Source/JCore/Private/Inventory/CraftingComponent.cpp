@@ -22,8 +22,7 @@ void UCraftingComponent::TickComponent(float DeltaTime,
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
-
-void UCraftingComponent::TryCraftRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
+void UCraftingComponent::CraftRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
 {
     if (!Recipe)
     {
@@ -70,66 +69,66 @@ void UCraftingComponent::ServerCraftRecipe_Implementation(UItemRecipeDataAsset* 
     this->CraftRecipe(Recipe, SourceInventory, TargetInventory);
 }
 
-void UCraftingComponent::CraftRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
+bool UCraftingComponent::TryCraftRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
 {
     if (!Recipe)
     {
         UE_LOG(LogCraftingComponent, Error, TEXT("CraftRecipe: Recipe is nullptr"))
-        return;
+        return false;
     }
 
     if (!SourceInventory)
     {
         UE_LOG(LogCraftingComponent, Error, TEXT("CraftRecipe: SourceInventory is nullptr"))
-        return;
+        return false;
     }
 
     if (!TargetInventory)
     {
         UE_LOG(LogCraftingComponent, Error, TEXT("CraftRecipe: TargetInventory is nullptr"))
-        return;
+        return false;
     }
 
     if (!this->InventoryHasItemsInRecipe(Recipe, SourceInventory))
     {
         UE_LOG(LogCraftingComponent, Warning, TEXT("CraftRecipe: Crafting failed, inventory does not have necessary items"))
-        return;
+        return false;
+    }
+
+    if (Recipe->GetInItems().Num() == 0)
+    {
+        UE_LOG(LogCraftingComponent, Warning, TEXT("CraftRecipe: Crafting failed, recipe has 0 input items"))
+        return false;
+    }
+
+    if (!SourceInventory->ContainsGivenItems(Recipe->GetInItems()))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Source inventory is missing required items"));
+        return false;
+    }
+
+    for (const TPair<UItemDataAsset*, int32> Item : Recipe->GetOutItems())
+    {
+        if (!TargetInventory->HasAvailableSpaceForItem(Item.Key, Item.Value))
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Target Inventory doesn't have sufficient space available"));
+            return false;
+        }
     }
 
     // Remove Recipe In Items
-    for (const TPair<UItemDataAsset*, int32> ItemPair : Recipe->GetInItems())
-    {
-        UItemDataAsset* Item = ItemPair.Key;
-
-        if (!Item)
-        {
-            UE_LOG(LogCraftingComponent, Error, TEXT("CraftRecipe: Item is nullptr"))
-            return;
-        }
-
-        const int32 NumItems = ItemPair.Value;
-
-        SourceInventory->TryRemoveItem(Item, NumItems);
-    }
+    bool bItemRemovalSucceeded = SourceInventory->TryRemoveItems(Recipe->GetInItems());
 
     // Add Recipe Out Items
-    for (const TPair<UItemDataAsset*, int32> ItemPair : Recipe->GetOutItems())
+    bool bItemAdditionSucceeded = TargetInventory->TryAddItems(Recipe->GetOutItems());
+
+    if (!bItemRemovalSucceeded || !bItemAdditionSucceeded)
     {
-        UItemDataAsset* Item = ItemPair.Key;
-
-        if (!Item)
-        {
-            UE_LOG(LogCraftingComponent, Error, TEXT("CraftRecipe: Item is nullptr"))
-            return;
-        }
-
-        const int32 NumItems = ItemPair.Value;
-
-        // TODO: This won't add if not enough room in inventory
-        TargetInventory->TryAddItem(Item, NumItems);
-
-        UE_LOG(LogCraftingComponent, Verbose, TEXT("CraftRecipe: Crafted: %s"), *Item->GetName())
+        UE_LOG(LogTemp, Warning, TEXT("Item removal or item addition failed"));
+        return false;
     }
+
+    return true;
 }
 
 bool UCraftingComponent::InventoryHasItemsInRecipe(UItemRecipeDataAsset* Recipe,

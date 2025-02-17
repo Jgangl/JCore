@@ -115,7 +115,7 @@ void UInteractableComponent::OnComponentCreated()
     {
         if (MeshComponent)
         {
-            //MeshComponent->SetRenderCustomDepth(true);
+            MeshComponent->SetRenderCustomDepth(true);
         }
     }
 }
@@ -216,7 +216,7 @@ void UInteractableComponent::BeginLookAt()
     {
         if (MeshComponent)
         {
-            //MeshComponent->SetCustomDepthStencilValue(2);
+            MeshComponent->SetCustomDepthStencilValue(2);
         }
     }
 
@@ -229,7 +229,7 @@ void UInteractableComponent::EndLookAt()
     {
         if (MeshComponent)
         {
-            //MeshComponent->SetCustomDepthStencilValue(0);
+            MeshComponent->SetCustomDepthStencilValue(0);
         }
     }
 

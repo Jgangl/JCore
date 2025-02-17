@@ -71,6 +71,12 @@ public:
     bool ContainsItemAmount(UItemDataAsset* ItemToCheck, const int Amount = 1) const;
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool HasAvailableSpaceForItem(UItemDataAsset* ItemToCheck, const int Amount = 1) const;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool HasAvailableSpaceForItems(const TMap<UItemDataAsset*, int32> &InItems) const;
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
     int32 ContainsItem(UItemDataAsset* ItemToCheck);
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -110,7 +116,7 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
     int NumberOfSlots;
 
-    UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_InventorySlots)
+    UPROPERTY(EditAnywhere, ReplicatedUsing = OnRep_InventorySlots)
     TArray<FInventorySlot> InventorySlots;
 
 private:

@@ -178,6 +178,8 @@ void ABuildable::OnConstruction(const FTransform& Transform)
 
             MeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
                                                          ECollisionResponse::ECR_Block);
+
+            MeshComponent->SetRenderCustomDepth(true);
         }
     }
 }
@@ -239,6 +241,14 @@ void ABuildable::SetMaterial(UMaterialInterface* NewMaterial)
 void ABuildable::SetMaterialInvalid()
 {
     this->SetMaterial(this->InvalidPreviewMaterial);
+
+    for (UMeshComponent* MeshComponent : this->MeshComponents)
+    {
+        if (MeshComponent)
+        {
+            MeshComponent->SetCustomDepthStencilValue(2);
+        }
+    }
 }
 
 void ABuildable::ResetMaterial()
@@ -248,9 +258,12 @@ void ABuildable::ResetMaterial()
         UMeshComponent* MeshComponent = this->MeshComponents[i];
         UMaterialInterface* OriginalMaterial = this->OriginalMaterials[i];
 
-        MeshComponent->SetMaterial(0, OriginalMaterial);
+        if (!MeshComponent) continue;
 
+        MeshComponent->SetMaterial(0, OriginalMaterial);
         MeshComponent->SetOverlayMaterial(nullptr);
+
+        MeshComponent->SetCustomDepthStencilValue(0);
     }
 }
 
@@ -287,6 +300,8 @@ void ABuildable::CompleteBuilding()
     {
         return;
     }
+
+    UE_LOG(LogTemp, Warning, TEXT("Setting node loc   X: %f, Y: %f, Z: %f"), this->GetActorLocation().X, this->GetActorLocation().Y, this->GetActorLocation().Z);
 
     GraphNodeComponent->SetNodeLocation(this->GetActorLocation());
 
@@ -389,4 +404,9 @@ void ABuildable::GetSnapTransformsOfType(EBuildingSnapType InSnapType, TArray<FT
     }
 
     OutSnapTransforms = WorldSnapTransforms;
+}
+
+void ABuildable::OnActorLoaded_Implementation()
+{
+    this->UpdatePreviewing();
 }

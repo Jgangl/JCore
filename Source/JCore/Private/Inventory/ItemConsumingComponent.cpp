@@ -23,6 +23,7 @@ void UItemConsumingComponent::StartConsuming()
     World->GetTimerManager().SetTimer(this->ConsumingTimerHandle,
                                       this,
                                       &UItemConsumingComponent::OnConsumingTimerEnded,
+                                      this->TimeToConsume,
                                       this->bLoop);
 }
 

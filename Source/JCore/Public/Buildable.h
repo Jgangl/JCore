@@ -7,6 +7,7 @@
 
 #include "BuildableInterface.h"
 #include "BuildingSnapType.h"
+#include "SaveSystem/SaveableObjectInterface.h"
 #include "SteamFactory/PipeConnectionComponent.h"
 
 #include "Buildable.generated.h"
@@ -14,7 +15,7 @@
 DECLARE_LOG_CATEGORY_CLASS(LogBuildable, Log, All)
 
 UCLASS(Abstract, Blueprintable)
-class JCORE_API ABuildable : public AActor, public IBuildableInterface
+class JCORE_API ABuildable : public AActor, public IBuildableInterface, public ISaveableObjectInterface
 {
     GENERATED_BODY()
 
@@ -73,6 +74,8 @@ public:
 
     UFUNCTION(BlueprintCallable)
     virtual void GetSnapTransformsOfType(EBuildingSnapType InSnapType, TArray<FTransform>& OutSnapTransforms) const;
+
+    virtual void OnActorLoaded_Implementation() override;
 
 protected:
     virtual void BeginPlay() override;

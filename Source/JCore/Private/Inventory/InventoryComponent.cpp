@@ -389,6 +389,54 @@ bool UInventoryComponent::ContainsItemAmount(UItemDataAsset* ItemToCheck, const 
     return false;
 }
 
+bool UInventoryComponent::HasAvailableSpaceForItem(UItemDataAsset* ItemToCheck, const int Amount) const
+{
+    if (!ItemToCheck)
+    {
+        UE_LOG(LogTemp, Error, TEXT("ItemToCheck is nullptr"));
+        return false;
+    }
+
+    const int32 MaxStackSize = ItemToCheck->GetMaxStackSize();
+
+    int32 NumAvailableSpots = 0;
+
+    for (int i = 0; i < this->InventorySlots.Num(); i++)
+    {
+        const FInventorySlot& InventorySlot = this->InventorySlots[i];
+
+        if (this->IsSlotFull(InventorySlot))
+        {
+            continue;
+        }
+
+        // Item Exists in Inventory slot
+        if (ItemToCheck == InventorySlot.Item)
+        {
+            NumAvailableSpots += MaxStackSize - InventorySlot.CurrentStackSize;
+        }
+
+        if (this->IsSlotEmpty(InventorySlot))
+        {
+            NumAvailableSpots += MaxStackSize;
+        }
+    }
+
+    if (NumAvailableSpots < Amount)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool UInventoryComponent::HasAvailableSpaceForItems(const TMap<UItemDataAsset*, int32>& InItems) const
+{
+    // TODO: Implement
+    UE_LOG(LogInventoryComponent, Error, TEXT("UNIMPLEMENTED"));
+    return false;
+}
+
 int32 UInventoryComponent::ContainsItem(UItemDataAsset* ItemToCheck)
 {
     if (!ItemToCheck)

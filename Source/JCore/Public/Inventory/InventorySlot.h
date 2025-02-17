@@ -3,8 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-//#include "InventoryItem.h"
-//#include "Item.h"
 #include "ItemDataAsset.h"
 #include "InventorySlot.generated.h"
 
@@ -34,10 +32,10 @@ struct FInventorySlot
         CurrentStackSize = Amount;
     };
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     UItemDataAsset* Item;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
     int CurrentStackSize;
 
     void Clear()

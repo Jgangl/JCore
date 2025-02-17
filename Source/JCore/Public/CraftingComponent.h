@@ -25,23 +25,23 @@ public:
                                ELevelTick TickType,
                                FActorComponentTickFunction* ThisTickFunction) override;
 
+    bool TryCraftRecipe(UItemRecipeDataAsset* Recipe,
+                    UInventoryComponent*  SourceInventory,
+                    UInventoryComponent*  TargetInventory);
+
 protected:
     // Called when the game starts
     virtual void BeginPlay() override;
 
     UFUNCTION(BlueprintCallable)
-    void TryCraftRecipe(UItemRecipeDataAsset* Recipe,
-                        UInventoryComponent*  SourceInventory,
-                        UInventoryComponent*  TargetInventory);
+    void CraftRecipe(UItemRecipeDataAsset* Recipe,
+                     UInventoryComponent*  SourceInventory,
+                     UInventoryComponent*  TargetInventory);
 
     UFUNCTION(Server, Reliable)
     void ServerCraftRecipe(UItemRecipeDataAsset* Recipe,
                            UInventoryComponent*  SourceInventory,
                            UInventoryComponent*  TargetInventory);
-
-    void CraftRecipe(UItemRecipeDataAsset* Recipe,
-                     UInventoryComponent*  SourceInventory,
-                     UInventoryComponent*  TargetInventory);
 
     static bool InventoryHasItemsInRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* InventoryComponent);
 };

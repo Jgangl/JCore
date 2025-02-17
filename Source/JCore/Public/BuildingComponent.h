@@ -63,6 +63,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void SetBuildMode(bool InBuildMode);
 
+    UFUNCTION(BlueprintCallable)
+    void SetBuildOnWorldGrid(bool InBuildOnWorldGrid);
+
     UFUNCTION(Server, Reliable, BlueprintCallable)
     void ServerSetBuildableHoveringToDelete(ABuildable* NewBuildable);
 
@@ -227,6 +230,9 @@ protected:
 
     UPROPERTY(EditAnywhere)
     bool bRequireItemsToBuild;
+
+    UPROPERTY(EditAnywhere)
+    bool bBuildOnWorldGrid;
 
     UPROPERTY(EditAnywhere)
     bool bInPipeBuildMode;
