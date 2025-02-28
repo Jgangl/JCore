@@ -23,7 +23,7 @@ ABuildable::ABuildable()
     this->SnapTransforms.Add(EBuildingSnapType::Floor);
     this->SnapTransforms.Add(EBuildingSnapType::Wall);
 
-    this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Block);
+    this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Overlap);
 
     const FString ValidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_ValidBuildingPreview.M_ValidBuildingPreview'");
     const FString InvalidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_InvalidBuildingPreview.M_InvalidBuildingPreview'");
@@ -177,7 +177,7 @@ void ABuildable::OnConstruction(const FTransform& Transform)
             this->OriginalMaterials.Add(MeshComponent->GetMaterial(0));
 
             MeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2,
-                                                         ECollisionResponse::ECR_Block);
+                                                         ECollisionResponse::ECR_Overlap);
 
             MeshComponent->SetRenderCustomDepth(true);
         }
@@ -352,6 +352,7 @@ void ABuildable::SetIsPreviewing(bool InIsPreviewing)
 
 void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
 {
+    UE_LOG(LogTemp, Warning, TEXT("Set collision"));
     for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
         if (!MeshComponent) continue;

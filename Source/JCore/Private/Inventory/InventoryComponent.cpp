@@ -502,7 +502,7 @@ int32 UInventoryComponent::ContainsPartialStack(UItemDataAsset* ItemToCheck)
 }
 
 // TODO: Should track in bool whenever adding/removing item
-bool UInventoryComponent::IsInventoryFull()
+bool UInventoryComponent::HasAnyEmptySlots()
 {
     bool bFull = true;
 

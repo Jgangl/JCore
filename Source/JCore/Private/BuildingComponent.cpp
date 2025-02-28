@@ -43,7 +43,7 @@ UBuildingComponent::UBuildingComponent()
 
     this->bRequireItemsToBuild = true;
 
-    this->PipeBuildModeState = EPipeBuildModeState::None;
+    this->PipeBuildModeState = EBuildModeState::None;
 
     this->SetIsReplicatedByDefault(true);
 }
@@ -101,7 +101,7 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         return;
     }
 /*
-    if (this->PipeBuildModeState == EPipeBuildModeState::InProcess)
+    if (this->PipeBuildModeState == EBuildModeState::InProcess)
     {
         // TODO: Find a pipe path from initial point to current end point, dynamically add/remove pipes
 
@@ -230,7 +230,7 @@ void UBuildingComponent::ServerCancelBuilding_Implementation()
     this->SetBuildMode(false);
     this->ClearBuildingPreview(true);
 
-    this->PipeBuildModeState = EPipeBuildModeState::None;
+    this->PipeBuildModeState = EBuildModeState::None;
 }
 
 void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
@@ -587,9 +587,9 @@ void UBuildingComponent::ServerTryBuild_Implementation()
 /*
     // We need to update the pipe build mode state.
     if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
-        this->PipeBuildModeState == EPipeBuildModeState::None)
+        this->PipeBuildModeState == EBuildModeState::None)
     {
-        this->PipeBuildModeState = EPipeBuildModeState::InProcess;
+        this->PipeBuildModeState = EBuildModeState::InProcess;
         BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
 
         // Save initial position to be able to calculate a path from
@@ -598,9 +598,9 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         return;
     }
     else if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
-             this->PipeBuildModeState == EPipeBuildModeState::InProcess)
+             this->PipeBuildModeState == EBuildModeState::InProcess)
     {
-        this->PipeBuildModeState = EPipeBuildModeState::None;
+        this->PipeBuildModeState = EBuildModeState::None;
 
         this->InitialPipeBuildLocation = FVector::Zero();
     }

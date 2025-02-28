@@ -19,7 +19,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeletingCanceled);
 DECLARE_LOG_CATEGORY_CLASS(LogBuildingComponent, Log, All)
 
 UENUM(BlueprintType)
-enum class EPipeBuildModeState : uint8
+enum class EBuildModeState : uint8
 {
     None,
     Initial,
@@ -238,7 +238,7 @@ protected:
     bool bInPipeBuildMode;
 
     UPROPERTY(EditAnywhere)
-    EPipeBuildModeState PipeBuildModeState;
+    EBuildModeState PipeBuildModeState;
 
     UPROPERTY(Transient)
     FVector InitialPipeBuildLocation;

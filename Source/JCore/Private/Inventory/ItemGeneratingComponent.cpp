@@ -58,7 +58,7 @@ void UItemGeneratingComponent::OnGeneratingTimerEnded()
         return;
     }
 
-    if (!this->InventoryComponent->IsInventoryFull() ||
+    if (!this->InventoryComponent->HasAnyEmptySlots() ||
         this->InventoryComponent->ContainsPartialStack(this->ItemToGenerate) >= 0)
     {
         this->InventoryComponent->TryAddItem(this->ItemToGenerate, 1);

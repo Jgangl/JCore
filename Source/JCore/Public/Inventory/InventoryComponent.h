@@ -87,7 +87,7 @@ public:
     int32 ContainsPartialStack(UItemDataAsset* ItemToCheck);
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
-    bool IsInventoryFull();
+    bool HasAnyEmptySlots();
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
     bool IsInventoryEmpty();

@@ -113,7 +113,7 @@ protected:
     UPROPERTY(EditAnywhere)
     FVector OriginOffset;
 
-    UPROPERTY(ReplicatedUsing=OnRep_IsPreviewing)
+    UPROPERTY(VisibleAnywhere, ReplicatedUsing=OnRep_IsPreviewing)
     bool bIsPreviewing;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing=OnRep_bPlacementValid)
