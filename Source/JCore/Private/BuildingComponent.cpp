@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "SteamFactory/Conveyor.h"
 #include "SteamFactory/SteamPipe_Instanced.h"
 
 UBuildingComponent::UBuildingComponent()
@@ -44,6 +45,8 @@ UBuildingComponent::UBuildingComponent()
     this->bRequireItemsToBuild = true;
 
     this->PipeBuildModeState = EBuildModeState::None;
+
+    this->ConveyorBuildModeState = EBuildModeState::None;
 
     this->SetIsReplicatedByDefault(true);
 }
@@ -100,6 +103,37 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         this->HandleDeleteMode(OutHits);
         return;
     }
+
+    if (this->ConveyorBuildModeState == EBuildModeState::InProcess)
+    {
+        TArray<FTransform> StraightConveyorTransforms;
+
+        FVector EndConveyorLocation = this->GetGridLocation(OutHits[0].Location);
+
+        /*
+        FVector LocDifference   = EndConveyorLocation - this->InitialConveyorBuildLocation;
+
+        int NumXGridPoints = FMath::Abs(LocDifference.X) / this->GridTileSizeX;
+        int NumZGridPoints = FMath::Abs(LocDifference.Z) / this->GridTileSizeZ;
+        int NumYGridPoints = FMath::Abs(LocDifference.Y) / this->GridTileSizeY;
+
+        for (int i = 0; i < NumXGridPoints; i++)
+        {
+            FVector GridLoc = this->InitialConveyorBuildLocation;
+            GridLoc.X += i * this->GridTileSizeX * FMath::Sign(LocDifference.X);
+
+            StraightConveyorTransforms.Add(FTransform(GridLoc));
+
+            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Blue);
+        }
+        */
+
+        if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
+        {
+            Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, EndConveyorLocation);
+        }
+    }
+
 /*
     if (this->PipeBuildModeState == EBuildModeState::InProcess)
     {
@@ -231,6 +265,7 @@ void UBuildingComponent::ServerCancelBuilding_Implementation()
     this->ClearBuildingPreview(true);
 
     this->PipeBuildModeState = EBuildModeState::None;
+    this->ConveyorBuildModeState = EBuildModeState::None;
 }
 
 void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
@@ -584,6 +619,47 @@ void UBuildingComponent::ServerTryBuild_Implementation()
             return;
         }
     }
+
+
+    if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
+        this->ConveyorBuildModeState == EBuildModeState::None)
+    {
+        this->ConveyorBuildModeState = EBuildModeState::InProcess;
+        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
+
+        // Save initial position to be able to calculate a path from
+        this->InitialConveyorBuildLocation = this->GetGridLocation(BuildableToBuild->GetActorLocation());
+
+        UE_LOG(LogTemp, Warning, TEXT("Starting conveyor build"));
+
+        return;
+    }
+    else if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
+             this->ConveyorBuildModeState == EBuildModeState::InProcess)
+    {
+        this->ConveyorBuildModeState = EBuildModeState::None;
+
+        FTransform NewTransform = this->ServerTargetTransform;
+        NewTransform.SetLocation(this->InitialConveyorBuildLocation);
+        BuildableToBuild->SetActorTransform(NewTransform);
+
+        if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
+        {
+            Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, this->GetGridLocation(this->GetClosestGridLocationFromCamera()));
+        }
+
+        this->InitialConveyorBuildLocation = FVector::Zero();
+
+        UE_LOG(LogTemp, Warning, TEXT("Finishing conveyor build"));
+    }
+    else
+    {
+        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
+        UE_LOG(LogTemp, Warning, TEXT("Finishing other build"));
+    }
+
+
+
 /*
     // We need to update the pipe build mode state.
     if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Pipe &&
@@ -606,8 +682,6 @@ void UBuildingComponent::ServerTryBuild_Implementation()
     }
 */
     this->ClearBuildingPreview(false);
-
-    BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
 
     this->OnCompletedBuilding.Broadcast(BuildableToBuild);
 
@@ -696,7 +770,7 @@ void UBuildingComponent::FinishDeleting()
         // Add items back to inventory
         if (!PlayerInventory->TryAddItems(Recipe->GetInItems()))
         {
-            UE_LOG(LogBuildingComponent, Warning, TEXT("ServerTryBuild : Adding items failed. Most likely due to full inventory."));
+            UE_LOG(LogBuildingComponent, Warning, TEXT("FinishDeleting : Adding items failed. Most likely due to full inventory."));
             return;
         }
     }
@@ -775,6 +849,19 @@ void UBuildingComponent::GetFirstPersonHitResults(TArray<FHitResult>& OutHits) c
         EDrawDebugTrace::None,
         OutHits,
         true);
+}
+
+const FVector UBuildingComponent::GetClosestGridLocationFromCamera() const
+{
+    TArray<FHitResult> OutHits;
+    this->GetFirstPersonHitResults(OutHits);
+
+    if (OutHits.Num() == 0)
+    {
+        return FVector::Zero();
+    }
+
+    return this->GetGridLocation(OutHits[0].Location);
 }
 
 const FVector UBuildingComponent::GetClosestGridLocationToCursor() const
@@ -888,6 +975,7 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
     if (bSnapToPipe && OutBuildingPreviewSnapTransforms.Num() > 0)
     {
+        UE_LOG(LogTemp, Warning, TEXT("Snapping"));
         this->bIsSnapping = true;
 
         if (!OutBuildingPreviewSnapTransforms.IsValidIndex(this->BuildingPreviewSnapIndex))

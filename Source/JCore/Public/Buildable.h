@@ -28,6 +28,8 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
 
+    virtual void PostInitializeComponents() override;
+
     UFUNCTION(BlueprintCallable)
     FString GetDisplayName() const;
 

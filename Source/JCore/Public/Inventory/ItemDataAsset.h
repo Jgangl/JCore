@@ -30,6 +30,9 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TSubclassOf<AActor> InGameActorClass;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UStaticMesh* StaticMesh;
+
 public:
     UFUNCTION(BlueprintCallable, BlueprintPure)
     FString GetName() { return this->Name; }
@@ -39,4 +42,7 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
     int32 GetMaxStackSize() const { return this->MaxStackSize; }
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    UStaticMesh* GetStaticMesh() const { return this->StaticMesh; }
 };

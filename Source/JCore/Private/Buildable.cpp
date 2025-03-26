@@ -200,6 +200,13 @@ void ABuildable::Tick(float DeltaSeconds)
     }
 }
 
+void ABuildable::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    GetComponents<UPipeConnectionComponent>(this->PipeConnectionComponents, true);
+}
+
 FString ABuildable::GetDisplayName() const
 {
     return this->DisplayName;
@@ -280,8 +287,6 @@ const FVector& ABuildable::GetBuildingOffset() const
 void ABuildable::CompleteBuilding()
 {
     this->SetIsPreviewing(false);
-
-    GetComponents<UPipeConnectionComponent>(this->PipeConnectionComponents, true);
 
     TArray<UNodeBase*> OutNeighborNodes;
 

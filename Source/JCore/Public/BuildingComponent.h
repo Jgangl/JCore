@@ -238,10 +238,19 @@ protected:
     bool bInPipeBuildMode;
 
     UPROPERTY(EditAnywhere)
+    bool bInConveyorBuildMode;
+
+    UPROPERTY(EditAnywhere)
     EBuildModeState PipeBuildModeState;
+
+    UPROPERTY(EditAnywhere)
+    EBuildModeState ConveyorBuildModeState;
 
     UPROPERTY(Transient)
     FVector InitialPipeBuildLocation;
+
+    UPROPERTY(Transient)
+    FVector InitialConveyorBuildLocation;
 
     // Pipe Building Process Steps:
     //  1. Left mouse button down (click) starts pipe building
@@ -253,6 +262,8 @@ private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
 
     void GetFirstPersonHitResults(TArray<FHitResult>& OutHits) const;
+
+    const FVector GetClosestGridLocationFromCamera() const;
 
     const FVector GetClosestGridLocationToCursor() const;
 

@@ -7,5 +7,6 @@ enum class EBuildingSnapType : uint8
 {
     Floor,
     Wall,
-    Pipe
+    Pipe,
+    Conveyor
 };
