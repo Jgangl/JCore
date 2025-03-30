@@ -132,6 +132,8 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         {
             Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, EndConveyorLocation);
         }
+
+        return;
     }
 
 /*
