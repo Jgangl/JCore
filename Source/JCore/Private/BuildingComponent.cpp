@@ -59,13 +59,6 @@ void UBuildingComponent::TickComponent(float DeltaTime,
 
     if (this->CurrentBuildingPreview)
     {
-        /*
-        FVector LerpedLocation = FMath::VInterpTo(this->CurrentBuildingPreview->GetActorLocation(),
-                                 this->ServerTargetTransform.GetLocation(),
-                                 DeltaTime,
-                                 this->BuildingPreviewInterpSpeed);
-        */
-
         this->CurrentBuildingPreview->SetActorLocation(this->ServerTargetTransform.GetLocation());
         this->CurrentBuildingPreview->SetActorRotation(this->ServerTargetTransform.GetRotation());
     }
@@ -109,24 +102,6 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         TArray<FTransform> StraightConveyorTransforms;
 
         FVector EndConveyorLocation = this->GetGridLocation(OutHits[0].Location);
-
-        /*
-        FVector LocDifference   = EndConveyorLocation - this->InitialConveyorBuildLocation;
-
-        int NumXGridPoints = FMath::Abs(LocDifference.X) / this->GridTileSizeX;
-        int NumZGridPoints = FMath::Abs(LocDifference.Z) / this->GridTileSizeZ;
-        int NumYGridPoints = FMath::Abs(LocDifference.Y) / this->GridTileSizeY;
-
-        for (int i = 0; i < NumXGridPoints; i++)
-        {
-            FVector GridLoc = this->InitialConveyorBuildLocation;
-            GridLoc.X += i * this->GridTileSizeX * FMath::Sign(LocDifference.X);
-
-            StraightConveyorTransforms.Add(FTransform(GridLoc));
-
-            DrawDebugSphere(GetWorld(), GridLoc, 50.0f, 10, FColor::Blue);
-        }
-        */
 
         if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
         {
@@ -690,6 +665,7 @@ void UBuildingComponent::ServerTryBuild_Implementation()
     // Notify the buildable that it is finished building
     if (IBuildableInterface* BuildableInterface = Cast<IBuildableInterface>(BuildableToBuild))
     {
+        // We should pass in the building or connection we are snapping to
         BuildableInterface->CompleteBuilding();
     }
 
@@ -977,7 +953,6 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
 
     if (bSnapToPipe && OutBuildingPreviewSnapTransforms.Num() > 0)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Snapping"));
         this->bIsSnapping = true;
 
         if (!OutBuildingPreviewSnapTransforms.IsValidIndex(this->BuildingPreviewSnapIndex))

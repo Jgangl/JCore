@@ -131,11 +131,35 @@ void ABuildable::OnRep_IsPreviewing()
 
 void ABuildable::UpdatePlacementValidity()
 {
-    // Update material
-    // We should not be able to build if we are overlapping other buildables or a character
+    if (this->GetSize() == FVector::Zero())
+    {
+        //UE_LOG(LogBuildable, Warning, TEXT("UpdatePlacementValidity: this->Size is FVector::Zero and placement validity will not work"));
+    }
 
-    bool bLocalValidPlacement = true;
+    // TODO: Put this in ABuildable as a property?
+    FVector OverlapCushion = this->GetSize() * 0.25f;
+    FVector OverlapCheckHalfExtents = (this->GetSize() - OverlapCushion) / 2.0f;
 
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
+
+    const TArray<AActor*> ActorsToIgnore{this};
+
+    // Walls origin is at the ground, we need to offset the box overlap check to compensate for this
+    //  Is there a better way to do this?
+    FVector OverlapCheckLocation = this->GetActorLocation() + this->GetOriginOffset();
+
+    TArray<AActor*> OverlappingActors;
+    float bIsOverlappingActors = UKismetSystemLibrary::BoxOverlapActors(GetWorld(),
+                                                                        OverlapCheckLocation,
+                                                                        OverlapCheckHalfExtents,
+                                                                        ObjectTypes,
+                                                                        ABuildable::StaticClass(),
+                                                                        ActorsToIgnore,
+                                                                        OverlappingActors);
+
+
+/*
     TArray<AActor*> OverlapplingActors;
     GetOverlappingActors(OverlapplingActors);
 
@@ -147,8 +171,9 @@ void ABuildable::UpdatePlacementValidity()
             bLocalValidPlacement = false;
         }
     }
+*/
 
-    this->bValidPlacement = bLocalValidPlacement;
+    this->bValidPlacement = !bIsOverlappingActors;
     this->OnRep_bPlacementValid();
 }
 
@@ -198,6 +223,10 @@ void ABuildable::Tick(float DeltaSeconds)
     {
         this->UpdatePlacementValidity();
     }
+
+    FBox BoundingBox = this->GetComponentsBoundingBox();
+
+    DrawDebugBox(GetWorld(), this->GetActorLocation(), BoundingBox.GetExtent(), FColor::Blue, false);
 }
 
 void ABuildable::PostInitializeComponents()
