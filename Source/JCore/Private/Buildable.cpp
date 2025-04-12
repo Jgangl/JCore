@@ -1,10 +1,11 @@
 
 #include "Buildable.h"
 
+#include "JCoreUtils.h"
 #include "Graph/GraphNodeComponent.h"
 #include "Graph/GraphSubsystem.h"
 #include "Kismet/GameplayStatics.h"
-#include "SteamFactory/PipeConnectionComponent.h"
+#include "SteamFactory/BuildingConnectionComponent.h"
 
 ABuildable::ABuildable()
 {
@@ -63,11 +64,11 @@ void ABuildable::BeginPlay()
 
 void ABuildable::Destroyed()
 {
-    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    for (UBuildingConnectionComponent* BuildingConnectionComponent : this->BuildingConnectionComponents)
     {
-        if (!PipeConnectionComponent) continue;
+        if (!BuildingConnectionComponent) continue;
 
-        PipeConnectionComponent->DisconnectConnections();
+        BuildingConnectionComponent->DisconnectConnections();
     }
 
     this->RemoveGraphNode();
@@ -233,7 +234,7 @@ void ABuildable::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
-    GetComponents<UPipeConnectionComponent>(this->PipeConnectionComponents, true);
+    GetComponents<UBuildingConnectionComponent>(this->BuildingConnectionComponents, true);
 }
 
 FString ABuildable::GetDisplayName() const
@@ -313,29 +314,37 @@ const FVector& ABuildable::GetBuildingOffset() const
     return this->BuildingOffset;
 }
 
-void ABuildable::CompleteBuilding()
+void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnection, UBuildingConnectionComponent* ToSnapConnection)
 {
     this->SetIsPreviewing(false);
 
     TArray<UNodeBase*> OutNeighborNodes;
 
-    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    if (FromSnapConnection && ToSnapConnection)
     {
-        if (!PipeConnectionComponent) continue;
+        FromSnapConnection->SetConnectedComponent(ToSnapConnection);
+        ToSnapConnection->SetConnectedComponent(FromSnapConnection);
 
-        PipeConnectionComponent->UpdateConnections(OutNeighborNodes);
+        AActor* SnapToOwner = ToSnapConnection->GetOwner();
+        if (!SnapToOwner)
+        {
+            UE_LOG(LogTemp, Error, TEXT("%hs : OtherOwner is nullptr"), __FUNCTION__);
+            return;
+        }
+
+        if (UGraphNodeComponent* SnapToNode = SnapToOwner->GetComponentByClass<UGraphNodeComponent>())
+        {
+            OutNeighborNodes.Add(SnapToNode->GetNode());
+        }
     }
 
 
     // TODO: Move this section of code to a function
     UGraphNodeComponent* GraphNodeComponent = Cast<UGraphNodeComponent>(this->GetComponentByClass(UGraphNodeComponent::StaticClass()));
-
     if (!GraphNodeComponent)
     {
         return;
     }
-
-    UE_LOG(LogTemp, Warning, TEXT("Setting node loc   X: %f, Y: %f, Z: %f"), this->GetActorLocation().X, this->GetActorLocation().Y, this->GetActorLocation().Z);
 
     GraphNodeComponent->SetNodeLocation(this->GetActorLocation());
 
@@ -359,17 +368,48 @@ void ABuildable::CompleteBuilding()
     }
 }
 
-void ABuildable::GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) const
+void ABuildable::GetOpenConnectionComponents(TArray<UBuildingConnectionComponent*>& OutConnectionComponents) const
 {
-    for (UPipeConnectionComponent* PipeConnectionComponent : this->PipeConnectionComponents)
+    for (UBuildingConnectionComponent* BuildingConnectionComponent : this->BuildingConnectionComponents)
     {
-        if (!PipeConnectionComponent) continue;
+        if (!BuildingConnectionComponent) continue;
 
-        if (!PipeConnectionComponent->IsConnected())
+        if (!BuildingConnectionComponent->IsConnected())
         {
-            OutSnapTransforms.Add(PipeConnectionComponent->GetPipeSnapTransform());
+            OutConnectionComponents.Add(BuildingConnectionComponent);
         }
     }
+}
+
+void ABuildable::GetConnectionSnapTransforms(TArray<FTransform>& OutSnapTransforms) const
+{
+    for (UBuildingConnectionComponent* BuildingConnectionComponent : this->BuildingConnectionComponents)
+    {
+        if (!BuildingConnectionComponent) continue;
+
+        if (!BuildingConnectionComponent->IsConnected())
+        {
+            OutSnapTransforms.Add(BuildingConnectionComponent->GetSnapTransform());
+        }
+    }
+}
+
+UBuildingConnectionComponent* ABuildable::GetClosestConnectionToLocation(const FVector& InLocation) const
+{
+    TArray<UBuildingConnectionComponent*> OpenConnections;
+    this->GetOpenConnectionComponents(OpenConnections);
+
+    TArray<USceneComponent*> ConnectionComponents(MoveTemp(OpenConnections));
+
+    return Cast<UBuildingConnectionComponent>(JCoreUtils::GetClosestSceneComponentToPoint(InLocation, ConnectionComponents));
+}
+
+bool ABuildable::HasOpenConnections() const
+{
+    TArray<FTransform> OpenConnections;
+    this->GetConnectionSnapTransforms(OpenConnections);
+
+    return !OpenConnections.IsEmpty();
 }
 
 void ABuildable::GetNeighborSnapLocations(TArray<FVector>& OutSnapLocations)

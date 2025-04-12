@@ -219,6 +219,8 @@ protected:
     UPROPERTY()
     bool bIsSnapping;
 
+    TPair<UBuildingConnectionComponent*, UBuildingConnectionComponent*> BuildingPreviewSnapConnections;
+
     UPROPERTY(Transient)
     int32 BuildingPreviewSnapIndex;
 

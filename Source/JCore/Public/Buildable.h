@@ -8,7 +8,7 @@
 #include "BuildableInterface.h"
 #include "BuildingSnapType.h"
 #include "SaveSystem/SaveableObjectInterface.h"
-#include "SteamFactory/PipeConnectionComponent.h"
+#include "SteamFactory/BuildingConnectionComponent.h"
 
 #include "Buildable.generated.h"
 
@@ -56,9 +56,15 @@ public:
 
     const FVector& GetBuildingOffset() const;
 
-    virtual void CompleteBuilding() override;
+    virtual void CompleteBuilding(UBuildingConnectionComponent* FromSnapConnection, UBuildingConnectionComponent* ToSnapConnection) override;
 
-    virtual void GetPipeSnapTransforms(TArray<FTransform>& OutSnapTransforms) const override;
+    virtual void GetOpenConnectionComponents(TArray<UBuildingConnectionComponent*>& OutConnectionComponents) const override;
+
+    virtual void GetConnectionSnapTransforms(TArray<FTransform>& OutSnapTransforms) const override;
+
+    virtual UBuildingConnectionComponent* GetClosestConnectionToLocation(const FVector& InLocation) const override;
+
+    virtual bool HasOpenConnections() const override;
 
     void GetNeighborSnapLocations(TArray<FVector>& OutSnapLocations);
 
@@ -139,5 +145,5 @@ protected:
     TMap<EBuildingSnapType, TArray<FTransform>> SnapTransforms;
 
     UPROPERTY(EditAnywhere)
-    TArray<UPipeConnectionComponent*> PipeConnectionComponents;
+    TArray<UBuildingConnectionComponent*> BuildingConnectionComponents;
 };

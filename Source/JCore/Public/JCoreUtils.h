@@ -12,6 +12,9 @@ public:
     /** Return FTransform closest to the TargetLocation from the given InTransforms, in world space. */
     static const FTransform GetClosestTransformToPoint(const FVector &TargetLocation, const TArray<FTransform> &InTransforms);
 
+    /** Return FTransform closest to the TargetLocation from the given InTransforms, in world space. */
+    static USceneComponent* GetClosestSceneComponentToPoint(const FVector &TargetLocation, const TArray<USceneComponent*> &InSceneComponents);
+
     template <typename TSubsystemClass>
     static TSubsystemClass* GetSubsystem(UWorld* InWorld)
     {

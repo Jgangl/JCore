@@ -38,3 +38,24 @@ const FTransform JCoreUtils::GetClosestTransformToPoint(const FVector&          
 
     return ClosestTransform;
 }
+
+USceneComponent* JCoreUtils::GetClosestSceneComponentToPoint(const FVector& TargetLocation,
+                                                             const TArray<USceneComponent*>& InSceneComponents)
+{
+    float ClosestLocationDistSquared = FLT_MAX;
+    USceneComponent* ClosestComp     = nullptr;
+
+    for (USceneComponent* SceneComponent : InSceneComponents)
+    {
+        if (!SceneComponent) continue;
+
+        const float DistSquared = FVector::DistSquared(TargetLocation, SceneComponent->GetComponentLocation());
+        if (DistSquared < ClosestLocationDistSquared)
+        {
+            ClosestLocationDistSquared = DistSquared;
+            ClosestComp = SceneComponent;
+        }
+    }
+
+    return ClosestComp;
+}
