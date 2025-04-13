@@ -125,6 +125,35 @@ void ABuildable::UpdatePreviewing()
     }
 }
 
+void ABuildable::OnConnectionConnected(UBuildingConnectionComponent* FromConnectedConnection,
+                                       UBuildingConnectionComponent* ToConnectedConnection)
+{
+    if (!FromConnectedConnection)
+    {
+        UE_LOG(LogBuildable, Error, TEXT("OnConnectionConnected: FromConnectedConnection is nullptr"));
+        return;
+    }
+
+    if (!ToConnectedConnection)
+    {
+        UE_LOG(LogBuildable, Error, TEXT("OnConnectionConnected: ToConnectedConnection is nullptr"));
+        return;
+    }
+
+    UE_LOG(LogBuildable, Verbose, TEXT("OnConnectionConnected: %s was connected to %s"), *FromConnectedConnection->GetName(), *ToConnectedConnection->GetName());
+}
+
+void ABuildable::OnConnectionDisconnected(UBuildingConnectionComponent* DisconnectedConnection)
+{
+    if (!DisconnectedConnection)
+    {
+        UE_LOG(LogBuildable, Error, TEXT("OnConnectionDisconnected: DisconnectedConnection is nullptr"));
+        return;
+    }
+
+    UE_LOG(LogBuildable, Verbose, TEXT("OnConnectionDisconnected: %s was disconnected"), *DisconnectedConnection->GetName());
+}
+
 void ABuildable::OnRep_IsPreviewing()
 {
     this->UpdatePreviewing();
@@ -159,21 +188,6 @@ void ABuildable::UpdatePlacementValidity()
                                                                         ActorsToIgnore,
                                                                         OverlappingActors);
 
-
-/*
-    TArray<AActor*> OverlapplingActors;
-    GetOverlappingActors(OverlapplingActors);
-
-    for (AActor* OverlappingActor : OverlapplingActors)
-    {
-        if (OverlappingActor->IsA(APawn::StaticClass()) ||
-            OverlappingActor->IsA(ABuildable::StaticClass()))
-        {
-            bLocalValidPlacement = false;
-        }
-    }
-*/
-
     this->bValidPlacement = !bIsOverlappingActors;
     this->OnRep_bPlacementValid();
 }
@@ -194,8 +208,23 @@ void ABuildable::OnConstruction(const FTransform& Transform)
 {
     Super::OnConstruction(Transform);
 
-    GetComponents(this->MeshComponents);
+    GetComponents<UBuildingConnectionComponent>(this->BuildingConnectionComponents, true);
+    for (UBuildingConnectionComponent* BuildingConnectionComponent : this->BuildingConnectionComponents)
+    {
+        if (!BuildingConnectionComponent)
+        {
+            UE_LOG(LogBuildable, Error, TEXT("OnConstruction: BuildingConnectionComponent is null"))
+            return;
+        }
 
+        BuildingConnectionComponent->OnConnectionConnected.RemoveAll(this);
+        BuildingConnectionComponent->OnConnectionDisconnected.RemoveAll(this);
+
+        BuildingConnectionComponent->OnConnectionConnected.AddUniqueDynamic(this, &ABuildable::OnConnectionConnected);
+        BuildingConnectionComponent->OnConnectionDisconnected.AddUniqueDynamic(this, &ABuildable::OnConnectionDisconnected);
+    }
+
+    GetComponents(this->MeshComponents);
     for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
         if (MeshComponent)

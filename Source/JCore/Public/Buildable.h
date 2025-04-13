@@ -95,6 +95,13 @@ protected:
     void UpdatePreviewing();
 
     UFUNCTION()
+    virtual void OnConnectionConnected(UBuildingConnectionComponent* FromConnectedConnection,
+                                       UBuildingConnectionComponent* ToConnectedConnection);
+
+    UFUNCTION()
+    virtual void OnConnectionDisconnected(UBuildingConnectionComponent* DisconnectedConnection);
+
+    UFUNCTION()
     void OnRep_IsPreviewing();
 
     UFUNCTION(BlueprintCallable)
