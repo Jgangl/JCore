@@ -93,6 +93,9 @@ public:
     UFUNCTION(BlueprintCallable)
     void FinishDeleting();
 
+    UFUNCTION(BlueprintCallable, Server, Reliable)
+    void ServerFinishDeleting();
+
     UFUNCTION(BlueprintCallable)
     AActor* GetPreviouslyCompletedBuilding();
 

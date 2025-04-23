@@ -21,6 +21,8 @@ ABuildable::ABuildable()
 
     this->SnapType = EBuildingSnapType::Floor;
 
+    this->bDebug = false;
+
     this->SnapTransforms.Add(EBuildingSnapType::Floor);
     this->SnapTransforms.Add(EBuildingSnapType::Wall);
 
@@ -254,9 +256,11 @@ void ABuildable::Tick(float DeltaSeconds)
         this->UpdatePlacementValidity();
     }
 
-    FBox BoundingBox = this->GetComponentsBoundingBox();
-
-    DrawDebugBox(GetWorld(), this->GetActorLocation(), BoundingBox.GetExtent(), FColor::Blue, false);
+    if (this->bDebug)
+    {
+        FBox BoundingBox = this->GetComponentsBoundingBox(false);
+        DrawDebugBox(GetWorld(), this->GetActorLocation(), BoundingBox.GetExtent(), FColor::Blue, false);
+    }
 }
 
 void ABuildable::PostInitializeComponents()
@@ -331,6 +335,16 @@ void ABuildable::ResetMaterial()
 
         MeshComponent->SetCustomDepthStencilValue(0);
     }
+}
+
+void ABuildable::MulticastSetMaterialInvalid_Implementation()
+{
+    this->SetMaterialInvalid();
+}
+
+void ABuildable::MulticastResetMaterial_Implementation()
+{
+    this->ResetMaterial();
 }
 
 bool ABuildable::RequiresOverlapCheck()
@@ -455,7 +469,6 @@ void ABuildable::SetIsPreviewing(bool InIsPreviewing)
 
 void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Set collision"));
     for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
         if (!MeshComponent) continue;

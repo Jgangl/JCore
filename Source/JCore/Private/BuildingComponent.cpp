@@ -266,26 +266,13 @@ void UBuildingComponent::SetDeleteMode(bool InDeleteMode)
 
         if (this->bInDeleteMode)
         {
-            UE_LOG(LogTemp, Verbose, TEXT("Enter Delete Mode"));
             this->ServerCancelBuilding();
         }
         else
         {
-            UE_LOG(LogTemp, Verbose, TEXT("Exit Delete Mode"));
+            this->LocalHoveringBuildableActor = nullptr;
 
-            if (this->LocalHoveringBuildableActor)
-            {
-                if (ABuildable* PreviousHoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor))
-                {
-                    PreviousHoveringBuildable->ResetMaterial();
-                }
-
-                this->ServerSetBuildableHoveringToDelete(nullptr);
-
-                this->LocalHoveringBuildableActor = nullptr;
-            }
-
-            this->BuildableHoveringToDelete = nullptr;
+            this->ServerSetBuildableHoveringToDelete(nullptr);
 
             this->CancelDeleting();
         }
@@ -396,9 +383,24 @@ const FTimerHandle& UBuildingComponent::GetDeleteTimerHandle() const
 
 void UBuildingComponent::ServerSetBuildableHoveringToDelete_Implementation(ABuildable* NewBuildable)
 {
-    if (this->BuildableHoveringToDelete != NewBuildable)
+    ABuildable* PreviousHoveringBuildable = this->BuildableHoveringToDelete;
+
+    if (this->BuildableHoveringToDelete == NewBuildable)
     {
-        this->BuildableHoveringToDelete = NewBuildable;
+        return;
+    }
+
+    this->BuildableHoveringToDelete = NewBuildable;
+
+    // Hovering a buildable to delete
+    if (this->BuildableHoveringToDelete)
+    {
+        this->BuildableHoveringToDelete->MulticastSetMaterialInvalid();
+    }
+
+    if (PreviousHoveringBuildable)
+    {
+        PreviousHoveringBuildable->MulticastResetMaterial();
     }
 }
 
@@ -507,7 +509,6 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         }
     }
 
-
     if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
         this->ConveyorBuildModeState == EBuildModeState::None)
     {
@@ -516,8 +517,6 @@ void UBuildingComponent::ServerTryBuild_Implementation()
 
         // Save initial position to be able to calculate a path from
         this->InitialConveyorBuildLocation = this->GetGridLocation(BuildableToBuild->GetActorLocation());
-
-        UE_LOG(LogTemp, Warning, TEXT("Starting conveyor build"));
 
         return;
     }
@@ -536,13 +535,10 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         }
 
         this->InitialConveyorBuildLocation = FVector::Zero();
-
-        UE_LOG(LogTemp, Warning, TEXT("Finishing conveyor build"));
     }
     else
     {
         BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
-        UE_LOG(LogTemp, Warning, TEXT("Finishing other build"));
     }
 
     this->ClearBuildingPreview(false);
@@ -604,6 +600,11 @@ void UBuildingComponent::FinishDeleting()
 
     World->GetTimerManager().ClearTimer(this->DeleteTimerHandle);
 
+    this->ServerFinishDeleting();
+}
+
+void UBuildingComponent::ServerFinishDeleting_Implementation()
+{
     if (this->bRequireItemsToBuild)
     {
         AActor* Owner = GetOwner();
@@ -1042,18 +1043,12 @@ void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)
                 }
             }
 
-            UE_LOG(LogTemp, Verbose, TEXT("HandleDeleteMode: Set hovering actor to: %s"), *ActorDirectlyHit->GetName());
             this->LocalHoveringBuildableActor = ActorDirectlyHit;
 
             ABuildable* HoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor);
 
             if (this->BuildableHoveringToDelete != HoveringBuildable)
             {
-                if (HoveringBuildable)
-                {
-                    HoveringBuildable->SetMaterialInvalid();
-                }
-
                 this->ServerSetBuildableHoveringToDelete(HoveringBuildable);
             }
         }
@@ -1062,12 +1057,6 @@ void UBuildingComponent::HandleDeleteMode(TArray<FHitResult>& OutHits)
     {
         if (this->LocalHoveringBuildableActor)
         {
-            ABuildable* PreviousHoveringBuildable = Cast<ABuildable>(this->LocalHoveringBuildableActor);
-            if (PreviousHoveringBuildable)
-            {
-                PreviousHoveringBuildable->ResetMaterial();
-            }
-
             this->ServerSetBuildableHoveringToDelete(nullptr);
 
             this->LocalHoveringBuildableActor = nullptr;

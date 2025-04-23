@@ -51,6 +51,12 @@ public:
     UFUNCTION(BlueprintCallable)
     void ResetMaterial();
 
+    UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+    void MulticastSetMaterialInvalid();
+
+    UFUNCTION(BlueprintCallable, NetMulticast, Reliable)
+    void MulticastResetMaterial();
+
     UFUNCTION(BlueprintCallable)
     bool RequiresOverlapCheck();
 
@@ -148,6 +154,9 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     EBuildingSnapType SnapType;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Debug")
+    bool bDebug;
 
     TMap<EBuildingSnapType, TArray<FTransform>> SnapTransforms;
 
