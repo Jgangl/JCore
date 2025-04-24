@@ -70,11 +70,11 @@ void UBuildingComponent::TickComponent(float DeltaTime,
 
     if (this->bFirstPersonInteraction)
     {
-        this->GetFirstPersonHitResults(OutHits);
+        JCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
     }
     else
     {
-        this->GetHitResultsUnderCursor(OutHits);
+        JCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
     }
 
     if (OutHits.Num() == 0)
@@ -291,7 +291,7 @@ void UBuildingComponent::AddCurrentBuildableOffset(FVector& InLocation) const
 void UBuildingComponent::StartCopyBuilding()
 {
     TArray<FHitResult> OutHits;
-    this->GetFirstPersonHitResults(OutHits);
+    JCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
 
     if (OutHits.Num() == 0)
     {
@@ -555,71 +555,10 @@ void UBuildingComponent::ServerSetTargetTransform_Implementation(const FTransfor
     this->ServerTargetTransform = TargetTransform;
 }
 
-void UBuildingComponent::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const
-{
-    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-    if (!PlayerController)
-    {
-        return;
-    }
-
-    FVector MouseLocation;
-    FVector MouseRotation;
-
-    PlayerController->DeprojectMousePositionToWorld(MouseLocation, MouseRotation);
-
-    float Distance = 5000.0f;
-    FVector End    = MouseLocation + MouseRotation * Distance;
-
-    TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
-
-    UKismetSystemLibrary::LineTraceMulti(
-        GetWorld(),
-        MouseLocation,
-        End,
-        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility),
-        false,
-        ActorsToIgnore,
-        EDrawDebugTrace::None,
-        OutHits,
-        true);
-}
-
-void UBuildingComponent::GetFirstPersonHitResults(TArray<FHitResult>& OutHits) const
-{
-    APlayerController* PlayerController = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-    if (!PlayerController || !PlayerController->PlayerCameraManager)
-    {
-        return;
-    }
-
-    FVector CameraLocation = PlayerController->PlayerCameraManager->GetCameraLocation();
-    FVector CameraDirection = PlayerController->PlayerCameraManager->GetCameraRotation().Vector();
-
-    float Distance = 5000.0f;
-    FVector Start  = CameraLocation;
-    FVector End    = Start + (CameraDirection * Distance);
-    float Radius   = 10.0f;
-
-    TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
-
-    UKismetSystemLibrary::SphereTraceMulti(
-        GetWorld(),
-        Start,
-        End,
-        Radius,
-        UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_Visibility),
-        false,
-        ActorsToIgnore,
-        EDrawDebugTrace::None,
-        OutHits,
-        true);
-}
-
 const FVector UBuildingComponent::GetClosestGridLocationFromCamera() const
 {
     TArray<FHitResult> OutHits;
-    this->GetFirstPersonHitResults(OutHits);
+    JCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
 
     if (OutHits.Num() == 0)
     {
@@ -632,7 +571,7 @@ const FVector UBuildingComponent::GetClosestGridLocationFromCamera() const
 const FVector UBuildingComponent::GetClosestGridLocationToCursor() const
 {
     TArray<FHitResult> OutHits;
-    this->GetHitResultsUnderCursor(OutHits);
+    JCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
 
     if (OutHits.Num() == 0)
     {

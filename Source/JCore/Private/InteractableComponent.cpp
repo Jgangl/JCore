@@ -69,7 +69,8 @@ void UInteractableComponent::BeginPlay()
     }
 }
 
-void UInteractableComponent::TickComponent(float DeltaTime, ELevelTick TickType,
+void UInteractableComponent::TickComponent(float                        DeltaTime,
+                                           ELevelTick                   TickType,
                                            FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
@@ -88,8 +89,8 @@ void UInteractableComponent::TickComponent(float DeltaTime, ELevelTick TickType,
         return;
     }
 
-    const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(
-        GetComponentLocation(), CameraManager->GetCameraLocation());
+    const FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(GetComponentLocation(),
+                                                                           CameraManager->GetCameraLocation());
 
     this->SetWorldRotation(LookAtRotation);
 

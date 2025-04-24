@@ -4,7 +4,6 @@
 
 #include "Net/UnrealNetwork.h"
 
-#include "BuildingPreview.h"
 #include "BuildingSnapType.h"
 #include "Inventory/BuildingRecipeDataAsset.h"
 
@@ -233,10 +232,6 @@ protected:
     bool bBuildOnWorldGrid;
 
 private:
-    void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
-
-    void GetFirstPersonHitResults(TArray<FHitResult>& OutHits) const;
-
     const FVector GetClosestGridLocationFromCamera() const;
 
     const FVector GetClosestGridLocationToCursor() const;

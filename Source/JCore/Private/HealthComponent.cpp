@@ -23,12 +23,6 @@ void UHealthComponent::BeginPlay()
     this->Health = this->MaxHealth;
 }
 
-void UHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-                                     FActorComponentTickFunction* ThisTickFunction)
-{
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-}
-
 void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -43,7 +37,7 @@ void UHealthComponent::ServerAddHealth_Implementation(float AmountToAdd)
 {
     this->Health = FMath::Clamp(this->Health + AmountToAdd, 0.0f, this->MaxHealth);
 
-    OnHealthChanged.Broadcast(this->Health);
+    this->OnHealthChanged.Broadcast(this->Health);
 }
 
 void UHealthComponent::ServerRemoveHealth_Implementation(float AmountToRemove)
@@ -98,7 +92,6 @@ void UHealthComponent::ServerReset_Implementation()
 
 void UHealthComponent::MulticastPlayHitSound_Implementation()
 {
-    // Handle hit sound in blueprints
     this->PlayHitSound();
 }
 
@@ -118,7 +111,6 @@ void UHealthComponent::PlayHitSound()
         return;
     }
 
-    // TODO: Add attenuation settings
     UGameplayStatics::PlaySoundAtLocation(GetWorld(), this->HitSoundBase, Owner->GetActorLocation());
 }
 

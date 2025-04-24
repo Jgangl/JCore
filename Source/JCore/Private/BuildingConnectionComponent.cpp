@@ -51,42 +51,7 @@ bool UBuildingConnectionComponent::IsConnected()
 {
     return this->GetConnectedComponent() != nullptr;
 }
-/*
-void UBuildingConnectionComponent::UpdateConnections(TArray<UNodeBase*> &OutNeighborNodes)
-{
-    AActor* Owner = this->GetOwner();
 
-    if (!Owner)
-    {
-        UE_LOG(LogPipeConnectionComponentComponent, Error, TEXT("%hs : Owner is nullptr"), __FUNCTION__);
-        return;
-    }
-
-    UBuildingConnectionComponent* OtherConnection = this->CheckConnection();
-
-    // No connection was found
-    if (!OtherConnection)
-    {
-        return;
-    }
-
-    this->SetConnectedComponent(OtherConnection);
-    OtherConnection->SetConnectedComponent(this);
-
-    AActor* OtherOwner = OtherConnection->GetOwner();
-
-    if (!OtherOwner)
-    {
-        UE_LOG(LogTemp, Error, TEXT("%hs : OtherOwner is nullptr"), __FUNCTION__);
-        return;
-    }
-
-    if (UGraphNodeComponent* HitNodeComponent = OtherOwner->GetComponentByClass<UGraphNodeComponent>())
-    {
-        OutNeighborNodes.Add(HitNodeComponent->GetNode());
-    }
-}
-*/
 void UBuildingConnectionComponent::DisconnectConnections()
 {
     UBuildingConnectionComponent* OtherConnection = this->GetConnectedComponent();

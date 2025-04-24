@@ -22,10 +22,6 @@ public:
     //! @brief Sets default values for this component's properties
     UHealthComponent();
 
-    virtual void TickComponent(float DeltaTime,
-                               ELevelTick TickType,
-                               FActorComponentTickFunction* ThisTickFunction) override;
-
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
     //! @brief Delegate broadcasted when Health is changed
@@ -73,7 +69,7 @@ protected:
     UPROPERTY(EditAnywhere, Replicated)
     float MaxHealth;
 
-    //! @brief Value representing current amount of 'health'
+    //! @brief Current amount of 'health'
     UPROPERTY(VisibleAnywhere, ReplicatedUsing = OnRep_Health)
     float Health;
 
