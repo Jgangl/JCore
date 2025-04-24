@@ -1,11 +1,12 @@
 
 #include "Buildable.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
+
 #include "JCoreUtils.h"
 #include "Graph/GraphNodeComponent.h"
 #include "Graph/GraphSubsystem.h"
-#include "Kismet/GameplayStatics.h"
-#include "SteamFactory/BuildingConnectionComponent.h"
 
 ABuildable::ABuildable()
 {

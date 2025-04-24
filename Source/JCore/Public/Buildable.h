@@ -3,12 +3,12 @@
 #pragma once
 
 #include "GameFramework/Actor.h"
-#include "Net/UnrealNetwork.h"
+
+#include "SaveSystem/SaveableObjectInterface.h"
 
 #include "BuildableInterface.h"
 #include "BuildingSnapType.h"
-#include "SaveSystem/SaveableObjectInterface.h"
-#include "SteamFactory/BuildingConnectionComponent.h"
+#include "BuildingConnectionComponent.h"
 
 #include "Buildable.generated.h"
 

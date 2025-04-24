@@ -4,7 +4,7 @@
 #include "UObject/ObjectMacros.h"
 #include "UObject/Interface.h"
 #include "Containers/Array.h"
-#include "SteamFactory/BuildingConnectionComponent.h"
+#include "BuildingConnectionComponent.h"
 
 #include "BuildableInterface.generated.h"
 

@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 
 #include "BuildingComponent.h"
 
@@ -10,8 +8,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "SteamFactory/Conveyor.h"
-#include "SteamFactory/SteamPipe_Instanced.h"
 
 UBuildingComponent::UBuildingComponent()
 {
@@ -35,7 +31,6 @@ UBuildingComponent::UBuildingComponent()
 
     this->bFirstPersonInteraction = true;
 
-    this->BuildingPreviewRotationAxis = EAxis::Type::Z;
     this->BuildingPreviewRotationOffset = FRotator(0.0f, 0.0f, 0.0f);
 
     this->CurrentBuildingPreviewRecipe = nullptr;
@@ -43,10 +38,6 @@ UBuildingComponent::UBuildingComponent()
     this->DeleteHoldTime = 0.45f;
 
     this->bRequireItemsToBuild = true;
-
-    this->PipeBuildModeState = EBuildModeState::None;
-
-    this->ConveyorBuildModeState = EBuildModeState::None;
 
     this->SetIsReplicatedByDefault(true);
 }
@@ -97,20 +88,6 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         return;
     }
 
-    if (this->ConveyorBuildModeState == EBuildModeState::InProcess)
-    {
-        TArray<FTransform> StraightConveyorTransforms;
-
-        FVector EndConveyorLocation = this->GetGridLocation(OutHits[0].Location);
-
-        if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
-        {
-            Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, EndConveyorLocation);
-        }
-
-        return;
-    }
-
     if (this->CurrentBuildingPreview)
     {
         this->HandleBuildingPreview(OutHits);
@@ -150,9 +127,6 @@ void UBuildingComponent::ServerCancelBuilding_Implementation()
 {
     this->SetBuildMode(false);
     this->ClearBuildingPreview(true);
-
-    this->PipeBuildModeState = EBuildModeState::None;
-    this->ConveyorBuildModeState = EBuildModeState::None;
 }
 
 void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
@@ -231,28 +205,7 @@ void UBuildingComponent::RotateBuildObject(bool bClockwise)
     }
     else
     {
-        switch (this->BuildingPreviewRotationAxis)
-        {
-            case EAxis::Type::X :
-            {
-                DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
-                break;
-            }
-            case EAxis::Type::Y :
-            {
-                DeltaRotation = FRotator(0.0f, 0.0f, RotationAmount);
-                break;
-            }
-            case EAxis::Type::Z :
-            {
-                DeltaRotation = FRotator(0.0f, RotationAmount, 0.0f);
-                break;
-            }
-            default :
-            {
-                UE_LOG(LogTemp, Warning, TEXT("Invalid rotation axis"));
-            }
-        }
+        DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
     }
 
     this->BuildingPreviewRotationOffset += DeltaRotation;
@@ -332,26 +285,6 @@ void UBuildingComponent::AddCurrentBuildableOffset(FVector& InLocation) const
     if (ABuildable* Buildable = Cast<ABuildable>(this->ActorClassToSpawn->GetDefaultObject()))
     {
         InLocation += Buildable->GetBuildingOffset();
-    }
-}
-
-void UBuildingComponent::IncrementBuildingPreviewRotationAxis()
-{
-    if (this->bIsSnapping)
-    {
-        this->IncrementBuildingPreviewSnapIndex();
-    }
-    else
-    {
-        uint8 NextAxis = this->BuildingPreviewRotationAxis + 1;
-
-        if (NextAxis > 3)
-        {
-            // Ignore "None" Axis
-            NextAxis = 1;
-        }
-
-        this->BuildingPreviewRotationAxis = static_cast<EAxis::Type>(NextAxis);
     }
 }
 
@@ -461,7 +394,6 @@ void UBuildingComponent::ServerTryBuild_Implementation()
     if (BuildableToBuild->RequiresOverlapCheck() && !BuildableToBuild->IsPlacementValid())
     {
         UE_LOG(LogTemp, Warning, TEXT("%hs : Building placement is invalid"), __FUNCTION__);
-        // TODO: Warning to player that attempted placement is invalid
         return;
     }
 
@@ -509,37 +441,7 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         }
     }
 
-    if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
-        this->ConveyorBuildModeState == EBuildModeState::None)
-    {
-        this->ConveyorBuildModeState = EBuildModeState::InProcess;
-        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
-
-        // Save initial position to be able to calculate a path from
-        this->InitialConveyorBuildLocation = this->GetGridLocation(BuildableToBuild->GetActorLocation());
-
-        return;
-    }
-    else if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
-             this->ConveyorBuildModeState == EBuildModeState::InProcess)
-    {
-        this->ConveyorBuildModeState = EBuildModeState::None;
-
-        FTransform NewTransform = this->ServerTargetTransform;
-        NewTransform.SetLocation(this->InitialConveyorBuildLocation);
-        BuildableToBuild->SetActorTransform(NewTransform);
-
-        if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
-        {
-            Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, this->GetGridLocation(this->GetClosestGridLocationFromCamera()));
-        }
-
-        this->InitialConveyorBuildLocation = FVector::Zero();
-    }
-    else
-    {
-        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
-    }
+    BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
 
     this->ClearBuildingPreview(false);
 
@@ -590,13 +492,11 @@ void UBuildingComponent::CancelDeleting()
 
 void UBuildingComponent::FinishDeleting()
 {
-    if (!this->BuildableHoveringToDelete)
+    UWorld* World = GetWorld();
+    if (!World)
     {
         return;
     }
-
-    UWorld* World = GetWorld();
-    if (!World) return;
 
     World->GetTimerManager().ClearTimer(this->DeleteTimerHandle);
 
@@ -605,6 +505,11 @@ void UBuildingComponent::FinishDeleting()
 
 void UBuildingComponent::ServerFinishDeleting_Implementation()
 {
+    if (!this->BuildableHoveringToDelete)
+    {
+        return;
+    }
+
     if (this->bRequireItemsToBuild)
     {
         AActor* Owner = GetOwner();
@@ -668,9 +573,6 @@ void UBuildingComponent::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) c
 
     TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
 
-    // TODO: Try to only hit landscape or other building objects?
-
-    // TODO: Do a sphere trace instead of line trace to more accurately hit objects
     UKismetSystemLibrary::LineTraceMulti(
         GetWorld(),
         MouseLocation,
@@ -701,9 +603,6 @@ void UBuildingComponent::GetFirstPersonHitResults(TArray<FHitResult>& OutHits) c
 
     TArray<AActor*> ActorsToIgnore = {PlayerController->GetPawn(), this->CurrentBuildingPreview};
 
-    // TODO: Try to only hit landscape or other building objects?
-
-    // TODO: Do a sphere trace instead of line trace to more accurately hit objects
     UKismetSystemLibrary::SphereTraceMulti(
         GetWorld(),
         Start,

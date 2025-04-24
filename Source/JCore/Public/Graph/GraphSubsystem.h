@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "SteamFactory/SteamGraph.h"
+#include "GraphBase.h"
 
 #include "GraphSubsystem.generated.h"
 

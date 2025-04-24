@@ -17,7 +17,7 @@ void UGraphSubsystem::Deinitialize()
 
 UGraphBase* UGraphSubsystem::CreateGraph()
 {
-    UGraphBase* NewGraph = NewObject<USteamGraph>();
+    UGraphBase* NewGraph = NewObject<UGraphBase>();
 
     this->Graphs.Add(NewGraph);
 

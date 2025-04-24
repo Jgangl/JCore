@@ -108,9 +108,6 @@ public:
     void AddCurrentBuildableOffset(FVector& InLocation) const;
 
     UFUNCTION(BlueprintCallable)
-    void IncrementBuildingPreviewRotationAxis();
-
-    UFUNCTION(BlueprintCallable)
     void StartCopyBuilding();
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
@@ -160,8 +157,6 @@ public:
 
     UPROPERTY(EditAnywhere)
     bool bFirstPersonInteraction;
-
-    // TODO: ADD A SETTING FOR WHETHER OR NOT TO USE OVERLAPS TO CHECK FOR PLACEMENT VALIDITY (WE DON'T NEED OVERLAPS WHEN USING GRID)
 
 private:
     float TargetLocationRepTimer;
@@ -217,8 +212,6 @@ protected:
     UPROPERTY()
     AActor* PreviouslyCompletedBuilding;
 
-    EAxis::Type BuildingPreviewRotationAxis;
-
     UPROPERTY()
     bool bIsSnapping;
 
@@ -238,30 +231,6 @@ protected:
 
     UPROPERTY(EditAnywhere)
     bool bBuildOnWorldGrid;
-
-    UPROPERTY(EditAnywhere)
-    bool bInPipeBuildMode;
-
-    UPROPERTY(EditAnywhere)
-    bool bInConveyorBuildMode;
-
-    UPROPERTY(EditAnywhere)
-    EBuildModeState PipeBuildModeState;
-
-    UPROPERTY(EditAnywhere)
-    EBuildModeState ConveyorBuildModeState;
-
-    UPROPERTY(Transient)
-    FVector InitialPipeBuildLocation;
-
-    UPROPERTY(Transient)
-    FVector InitialConveyorBuildLocation;
-
-    // Pipe Building Process Steps:
-    //  1. Left mouse button down (click) starts pipe building
-    //  2. Aim cursor at desired pipe end location
-    //  3. Pipe will find the closest grid location to end location
-    //  4. Left mouse button down (click) completes current pipe building
 
 private:
     void GetHitResultsUnderCursor(TArray<FHitResult>& OutHits) const;
