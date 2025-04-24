@@ -62,21 +62,12 @@ void UInventoryComponent::ServerSwapInventorySlots_Implementation(int32 SourceIn
 
     this->InventorySlots[TargetIndex] = TempSlot;
 
-    // TODO: Add ItemAdded/Removed delegate calls
-
     if (SourceInventory != this)
     {
         SourceInventory->OnItemChanged.Broadcast();
     }
 
     this->OnItemChanged.Broadcast();
-}
-
-void UInventoryComponent::TickComponent(float DeltaTime,
-                                        ELevelTick TickType,
-                                        FActorComponentTickFunction* ThisTickFunction)
-{
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
 void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -89,7 +80,6 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 bool UInventoryComponent::TryAddItem(UItemDataAsset* ItemToAdd, const int Amount)
 {
-    // Check if inventory can ddd items
     if (!ItemToAdd)
     {
         UE_LOG(LogTemp, Error, TEXT("TryAddItem: ItemToAdd was null"))
@@ -203,7 +193,7 @@ void UInventoryComponent::ServerAddItem_Implementation(UItemDataAsset* ItemToAdd
 
 void UInventoryComponent::ClientOnAddItem_Implementation(UItemDataAsset* ItemToAdd, const int Amount)
 {
-    // Need to call this on clients to handle UI stuff
+    // Broadcast on clients to handle UI
     this->OnItemAdded.Broadcast(ItemToAdd, Amount);
 }
 
@@ -253,11 +243,6 @@ bool UInventoryComponent::TryRemoveItem(UItemDataAsset* ItemToRemove, int Amount
         {
             break;
         }
-        else if (NumItemsRemoved > Amount)
-        {
-            // Just in case I made a mistake
-            UE_LOG(LogTemp, Error, TEXT("TryRemoveItem: BIG OOPSIE, Removed more items then you should have"))
-        }
     }
 
     this->OnItemRemoved.Broadcast(ItemToRemove, Amount);
@@ -281,8 +266,6 @@ bool UInventoryComponent::TryRemoveItems(const TMap<UItemDataAsset*, int32>& Ite
     {
         return false;
     }
-
-    // TODO : Should we verify item removal?
 
     for (const TTuple<UItemDataAsset*, int> ItemToRemove : ItemsToRemove)
     {

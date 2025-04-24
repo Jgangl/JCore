@@ -6,7 +6,6 @@
 
 UBuildingSubsystem::UBuildingSubsystem()
 {
-
 }
 
 void UBuildingSubsystem::Initialize(FSubsystemCollectionBase& Collection)

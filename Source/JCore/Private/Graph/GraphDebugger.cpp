@@ -98,8 +98,6 @@ void AGraphDebugger::DrawGraph()
             FVector Direction = (NeighborNode->GetLocation() - Node->GetLocation());
             Direction.Normalize();
 
-            // TODO: Need to only draw UNIQUE edges, we are currently drawing 2 lines for 1 edge
-            //TPair<UNodeBase*, UNodeBase*> Edge(Node, NeighborNode);
             FEdgePair Edge;
             Edge.Key = Node;
             Edge.Value = NeighborNode;

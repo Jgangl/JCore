@@ -1,4 +1,3 @@
-
 #include "Graph/GraphSubsystem.h"
 
 UGraphSubsystem::UGraphSubsystem()
@@ -27,6 +26,6 @@ UGraphBase* UGraphSubsystem::CreateGraph()
 
 UGraphBase* UGraphSubsystem::GetGraph()
 {
-    // TODO: Figure out how to handle multiple graphs
+    // TODO: Handle multiple graphs
     return this->Graphs.Last();
 }
