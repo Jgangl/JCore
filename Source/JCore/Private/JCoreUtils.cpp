@@ -1,9 +1,9 @@
 
-#include "JcoreUtils.h"
+#include "JCoreUtils.h"
 
 #include "Engine/World.h"
 
-const FVector JCoreUtils::GetClosestLocationToPoint(const FVector&         TargetLocation,
+const FVector UJCoreUtils::GetClosestLocationToPoint(const FVector&         TargetLocation,
                                                     const TArray<FVector>& InLocations)
 {
     float ClosestLocationDistSquared = FLT_MAX;
@@ -22,7 +22,7 @@ const FVector JCoreUtils::GetClosestLocationToPoint(const FVector&         Targe
     return ClosestLocation;
 }
 
-const FTransform JCoreUtils::GetClosestTransformToPoint(const FVector&            TargetLocation,
+const FTransform UJCoreUtils::GetClosestTransformToPoint(const FVector&            TargetLocation,
                                                         const TArray<FTransform>& InTransforms)
 {
     float ClosestLocationDistSquared = FLT_MAX;
@@ -41,7 +41,7 @@ const FTransform JCoreUtils::GetClosestTransformToPoint(const FVector&          
     return ClosestTransform;
 }
 
-USceneComponent* JCoreUtils::GetClosestSceneComponentToPoint(const FVector&                  TargetLocation,
+USceneComponent* UJCoreUtils::GetClosestSceneComponentToPoint(const FVector&                  TargetLocation,
                                                              const TArray<USceneComponent*>& InSceneComponents)
 {
     float ClosestLocationDistSquared = FLT_MAX;
@@ -62,15 +62,15 @@ USceneComponent* JCoreUtils::GetClosestSceneComponentToPoint(const FVector&     
     return ClosestComp;
 }
 
-void JCoreUtils::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits,
+void UJCoreUtils::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits,
                                           UWorld*             InWorld)
 {
     TArray<AActor*> EmptyActorArray;
 
-    JCoreUtils::GetHitResultsUnderCursor(OutHits, InWorld, EmptyActorArray);
+    UJCoreUtils::GetHitResultsUnderCursor(OutHits, InWorld, EmptyActorArray);
 }
 
-void JCoreUtils::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits,
+void UJCoreUtils::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits,
                                           UWorld*             InWorld,
                                           TArray<AActor*>&    ExtraActorsToIgnore)
 {
@@ -107,15 +107,15 @@ void JCoreUtils::GetHitResultsUnderCursor(TArray<FHitResult>& OutHits,
         true);
 }
 
-void JCoreUtils::GetFirstPersonHitResults(TArray<FHitResult>& OutHits,
+void UJCoreUtils::GetFirstPersonHitResults(TArray<FHitResult>& OutHits,
                                           UWorld*             InWorld)
 {
     TArray<AActor*> EmptyActorArray;
 
-    JCoreUtils::GetFirstPersonHitResults(OutHits, InWorld, EmptyActorArray);
+    UJCoreUtils::GetFirstPersonHitResults(OutHits, InWorld, EmptyActorArray);
 }
 
-void JCoreUtils::GetFirstPersonHitResults(TArray<FHitResult>& OutHits,
+void UJCoreUtils::GetFirstPersonHitResults(TArray<FHitResult>& OutHits,
                                           UWorld*             InWorld,
                                           TArray<AActor*>&    ExtraActorsToIgnore)
 {

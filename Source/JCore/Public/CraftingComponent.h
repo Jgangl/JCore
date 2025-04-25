@@ -21,27 +21,57 @@ public:
     // Sets default values for this component's properties
     UCraftingComponent();
 
-    virtual void TickComponent(float DeltaTime,
-                               ELevelTick TickType,
-                               FActorComponentTickFunction* ThisTickFunction) override;
-
+    /**
+     *  Attempts to craft the given recipe
+     *
+     *  @note Expected to be called on the Server
+     *
+     *  @param Recipe  The recipe with the items to check
+     *  @param Inventory  The UInventoryComponent to remove and add the output items to
+     *
+     *  @return True if Recipe was successfully crafted
+     */
+    UFUNCTION(BlueprintCallable, Category="Crafting")
     bool TryCraftRecipe(UItemRecipeDataAsset* Recipe,
-                    UInventoryComponent*  SourceInventory,
-                    UInventoryComponent*  TargetInventory);
+                        UInventoryComponent*  Inventory);
 
-protected:
-    // Called when the game starts
-    virtual void BeginPlay() override;
+    /**
+     *  Attempts to craft the given recipe
+     *
+     *  @note Expected to be called on the Server
+     *
+     *  @param Recipe  The recipe with the items to check
+     *  @param SourceInventory  The UInventoryComponent to remove input items from
+     *  @param TargetInventory  The UInventoryComponent to add the output items to
+     *
+     *  @return True if Recipe was successfully crafted
+     */
+    UFUNCTION(BlueprintCallable, Category="Crafting")
+    bool TryCraftRecipeToInventory(UItemRecipeDataAsset* Recipe,
+                                   UInventoryComponent*  SourceInventory,
+                                   UInventoryComponent*  TargetInventory);
 
-    UFUNCTION(BlueprintCallable)
-    void CraftRecipe(UItemRecipeDataAsset* Recipe,
-                     UInventoryComponent*  SourceInventory,
-                     UInventoryComponent*  TargetInventory);
-
-    UFUNCTION(Server, Reliable)
+    /**
+     *  Attempts to craft the given recipe on the server
+     *
+     *  @param Recipe  The recipe with the items to check
+     *  @param SourceInventory  The UInventoryComponent to remove the input items from
+     *  @param TargetInventory  The UInventoryComponent to add the output items to, defaults to the SourceInventory
+     */
+    UFUNCTION(Server, Reliable, Category="Crafting")
     void ServerCraftRecipe(UItemRecipeDataAsset* Recipe,
                            UInventoryComponent*  SourceInventory,
                            UInventoryComponent*  TargetInventory);
 
-    static bool InventoryHasItemsInRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* InventoryComponent);
+    /**
+     *  Checks whether a UInventoryComponent contains the necessary input items to craft the given recipe
+     *
+     *  @param Recipe  The recipe with the items to check
+     *  @param InventoryComponent  The UInventoryComponent to check items from
+     *
+     *  @return True if inventory contains the input items from the recipe
+     */
+    UFUNCTION(BlueprintCallable, Category="Crafting")
+    static bool InventoryHasItemsInRecipe(UItemRecipeDataAsset* Recipe,
+                                          UInventoryComponent*  InventoryComponent);
 };

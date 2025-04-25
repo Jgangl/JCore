@@ -1,10 +1,16 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
-class JCoreUtils
+#include "JCoreUtils.generated.h"
+
+UCLASS()
+class JCORE_API UJCoreUtils : public UBlueprintFunctionLibrary
 {
+     GENERATED_BODY()
+
 public:
     /**
      *  Gets a FVector that is closest to the TargetLocation from the given InLocations, in world space.
@@ -14,9 +20,9 @@ public:
      *
      *  @return The FVector in InLocations that is closest to the given TargetLocation
      */
+    UFUNCTION(BlueprintCallable, Category="Utility")
     static const FVector GetClosestLocationToPoint(const FVector         &TargetLocation,
                                                    const TArray<FVector> &InLocations);
-
     /**
      *  Gets a FTransform that is closest to the TargetLocation from the given InTransforms, in world space.
      *

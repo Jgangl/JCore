@@ -70,11 +70,11 @@ void UBuildingComponent::TickComponent(float DeltaTime,
 
     if (this->bFirstPersonInteraction)
     {
-        JCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
+        UJCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
     }
     else
     {
-        JCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
+        UJCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
     }
 
     if (OutHits.Num() == 0)
@@ -291,7 +291,7 @@ void UBuildingComponent::AddCurrentBuildableOffset(FVector& InLocation) const
 void UBuildingComponent::StartCopyBuilding()
 {
     TArray<FHitResult> OutHits;
-    JCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
+    UJCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
 
     if (OutHits.Num() == 0)
     {
@@ -302,7 +302,7 @@ void UBuildingComponent::StartCopyBuilding()
     {
         const TSubclassOf<ABuildable> CopiedBuildableClass = BuildableUnderCursor->GetClass();
 
-        UBuildingSubsystem* BuildingSubsystem = JCoreUtils::GetSubsystem<UBuildingSubsystem>(GetWorld());
+        UBuildingSubsystem* BuildingSubsystem = UJCoreUtils::GetSubsystem<UBuildingSubsystem>(GetWorld());
         ensure(BuildingSubsystem);
 
         this->ServerStartBuildingFromRecipe(BuildingSubsystem->GetRecipe(CopiedBuildableClass));
@@ -468,7 +468,10 @@ void UBuildingComponent::StartDeleting()
 
     UWorld* World = GetWorld();
 
-    if (!World) return;
+    if (!World)
+    {
+        return;
+    }
 
     World->GetTimerManager().SetTimer(this->DeleteTimerHandle,
                                       this,
@@ -528,7 +531,7 @@ void UBuildingComponent::ServerFinishDeleting_Implementation()
             return;
         }
 
-        UBuildingSubsystem* BuildingSubsystem = JCoreUtils::GetSubsystem<UBuildingSubsystem>(GetWorld());
+        UBuildingSubsystem* BuildingSubsystem = UJCoreUtils::GetSubsystem<UBuildingSubsystem>(GetWorld());
         ensure(BuildingSubsystem);
 
         UBuildingRecipeDataAsset* Recipe = BuildingSubsystem->GetRecipe(this->BuildableHoveringToDelete->GetClass());
@@ -558,7 +561,7 @@ void UBuildingComponent::ServerSetTargetTransform_Implementation(const FTransfor
 const FVector UBuildingComponent::GetClosestGridLocationFromCamera() const
 {
     TArray<FHitResult> OutHits;
-    JCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
+    UJCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
 
     if (OutHits.Num() == 0)
     {
@@ -571,7 +574,7 @@ const FVector UBuildingComponent::GetClosestGridLocationFromCamera() const
 const FVector UBuildingComponent::GetClosestGridLocationToCursor() const
 {
     TArray<FHitResult> OutHits;
-    JCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
+    UJCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
 
     if (OutHits.Num() == 0)
     {
@@ -814,7 +817,7 @@ const FTransform UBuildingComponent::GetClosestBuildableSnapTransform(const FVec
         }
     }
 
-    return JCoreUtils::GetClosestTransformToPoint(Center, AvailableSnapTransforms);
+    return UJCoreUtils::GetClosestTransformToPoint(Center, AvailableSnapTransforms);
 }
 
 bool UBuildingComponent::IsSnapPointAvailable(const FTransform& SnapTransform, const FVector& Extents) const

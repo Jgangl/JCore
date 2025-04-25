@@ -10,66 +10,15 @@ UCraftingComponent::UCraftingComponent()
     this->SetIsReplicatedByDefault(true);
 }
 
-void UCraftingComponent::BeginPlay()
+bool UCraftingComponent::TryCraftRecipe(UItemRecipeDataAsset* Recipe,
+                                        UInventoryComponent*  Inventory)
 {
-    Super::BeginPlay();
+    return this->TryCraftRecipeToInventory(Recipe, Inventory, Inventory);
 }
 
-void UCraftingComponent::TickComponent(float DeltaTime,
-                                       ELevelTick TickType,
-                                       FActorComponentTickFunction* ThisTickFunction)
-{
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-}
-
-void UCraftingComponent::CraftRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
-{
-    if (!Recipe)
-    {
-        UE_LOG(LogCraftingComponent, Error, TEXT("TryCraftRecipe: Recipe is nullptr"))
-        return;
-    }
-
-    if (!SourceInventory)
-    {
-        UE_LOG(LogCraftingComponent, Error, TEXT("TryCraftRecipe: SourceInventory is nullptr"))
-        return;
-    }
-
-    if (!TargetInventory)
-    {
-        UE_LOG(LogCraftingComponent, Error, TEXT("TryCraftRecipe: TargetInventory is nullptr"))
-        return;
-    }
-
-    // Craft On Server
-    this->ServerCraftRecipe(Recipe, SourceInventory, TargetInventory);
-}
-
-void UCraftingComponent::ServerCraftRecipe_Implementation(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
-{
-    if (!Recipe)
-    {
-        UE_LOG(LogCraftingComponent, Error, TEXT("ServerCraftRecipe: Recipe is nullptr"))
-        return;
-    }
-
-    if (!SourceInventory)
-    {
-        UE_LOG(LogCraftingComponent, Error, TEXT("ServerCraftRecipe: SourceInventory is nullptr"))
-        return;
-    }
-
-    if (!TargetInventory)
-    {
-        UE_LOG(LogCraftingComponent, Error, TEXT("ServerCraftRecipe: TargetInventory is nullptr"))
-        return;
-    }
-
-    this->CraftRecipe(Recipe, SourceInventory, TargetInventory);
-}
-
-bool UCraftingComponent::TryCraftRecipe(UItemRecipeDataAsset* Recipe, UInventoryComponent* SourceInventory, UInventoryComponent* TargetInventory)
+bool UCraftingComponent::TryCraftRecipeToInventory(UItemRecipeDataAsset* Recipe,
+                                                   UInventoryComponent*  SourceInventory,
+                                                   UInventoryComponent*  TargetInventory)
 {
     if (!Recipe)
     {
@@ -129,6 +78,31 @@ bool UCraftingComponent::TryCraftRecipe(UItemRecipeDataAsset* Recipe, UInventory
     }
 
     return true;
+}
+
+void UCraftingComponent::ServerCraftRecipe_Implementation(UItemRecipeDataAsset* Recipe,
+                                                          UInventoryComponent*  SourceInventory,
+                                                          UInventoryComponent*  TargetInventory)
+{
+    if (!Recipe)
+    {
+        UE_LOG(LogCraftingComponent, Error, TEXT("ServerCraftRecipe: Recipe is nullptr"))
+        return;
+    }
+
+    if (!SourceInventory)
+    {
+        UE_LOG(LogCraftingComponent, Error, TEXT("ServerCraftRecipe: SourceInventory is nullptr"))
+        return;
+    }
+
+    if (!TargetInventory)
+    {
+        UE_LOG(LogCraftingComponent, Error, TEXT("ServerCraftRecipe: TargetInventory is nullptr"))
+        return;
+    }
+
+    this->TryCraftRecipeToInventory(Recipe, SourceInventory, TargetInventory);
 }
 
 bool UCraftingComponent::InventoryHasItemsInRecipe(UItemRecipeDataAsset* Recipe,

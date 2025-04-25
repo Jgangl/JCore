@@ -445,7 +445,7 @@ UBuildingConnectionComponent* ABuildable::GetClosestConnectionToLocation(const F
 
     TArray<USceneComponent*> ConnectionComponents(MoveTemp(OpenConnections));
 
-    return Cast<UBuildingConnectionComponent>(JCoreUtils::GetClosestSceneComponentToPoint(InLocation, ConnectionComponents));
+    return Cast<UBuildingConnectionComponent>(UJCoreUtils::GetClosestSceneComponentToPoint(InLocation, ConnectionComponents));
 }
 
 bool ABuildable::HasOpenConnections() const
