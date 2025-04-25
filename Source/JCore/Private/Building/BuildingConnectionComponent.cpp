@@ -1,6 +1,6 @@
 // Copyright Joshua Gangl. All Rights Reserved.
 
-#include "BuildingConnectionComponent.h"
+#include "Building/BuildingConnectionComponent.h"
 
 #include "Graph/GraphNodeComponent.h"
 #include "Graph/GraphSubsystem.h"

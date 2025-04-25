@@ -1,6 +1,6 @@
 // Copyright Joshua Gangl. All Rights Reserved.
 
-#include "CraftingComponent.h"
+#include "Inventory/CraftingComponent.h"
 #include "Inventory/InventoryComponent.h"
 
 UCraftingComponent::UCraftingComponent()

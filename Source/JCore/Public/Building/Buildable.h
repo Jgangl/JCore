@@ -8,7 +8,7 @@
 
 #include "BuildableInterface.h"
 #include "BuildingSnapType.h"
-#include "BuildingConnectionComponent.h"
+#include "Building/BuildingConnectionComponent.h"
 
 #include "Buildable.generated.h"
 

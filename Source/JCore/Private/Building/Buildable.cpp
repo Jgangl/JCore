@@ -1,5 +1,6 @@
+// Copyright Joshua Gangl. All Rights Reserved.
 
-#include "Buildable.h"
+#include "Building/Buildable.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"

@@ -1,7 +1,7 @@
 
-#include "BuildingComponent.h"
+#include "Building/BuildingComponent.h"
 
-#include "Buildable.h"
+#include "Building/Buildable.h"
 #include "JCoreUtils.h"
 #include "Inventory/BuildingSubsystem.h"
 #include "Inventory/InventoryComponent.h"

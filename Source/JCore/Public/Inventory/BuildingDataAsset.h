@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Buildable.h"
+#include "Building/Buildable.h"
 #include "Engine/DataAsset.h"
 
 #include "BuildingDataAsset.generated.h"
