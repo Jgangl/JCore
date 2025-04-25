@@ -8,12 +8,4 @@ void ISaveableObjectInterface::ActorDestroyed_Implementation(AActor* ActorDestro
     {
         return;
     }
-/*
-    ASurvivalCraftGameMode* GM = Cast<ASurvivalCraftGameMode>(UGameplayStatics::GetGameMode(ActorDestroyed));
-    if (GM)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Calling OnActorDestroyed in Interface"))
-        GM->OnActorDestroyed(ActorDestroyed);
-    }
-*/
 }

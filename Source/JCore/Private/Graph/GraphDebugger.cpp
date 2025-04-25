@@ -81,7 +81,6 @@ void AGraphDebugger::DrawGraph()
         return;
     }
 
-    //TSet<TPair<UNodeBase*, UNodeBase*>> UniqueEdges;
     TSet<FEdgePair> UniqueEdges;
 
     // Draw Node locations

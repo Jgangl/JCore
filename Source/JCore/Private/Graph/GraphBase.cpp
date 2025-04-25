@@ -200,16 +200,10 @@ bool UGraphBase::BreadthFirstSearchNodes(UNodeBase* SourceNode, TArray<UNodeBase
 
         if (!CurrentNode) continue;
 
-        //UE_LOG(LogTemp, Warning, TEXT("Visiting Node: %s"), *CurrentNode->GetName());
-
         if (TargetNodes.Contains(CurrentNode))
         {
             return true;
         }
-
-        int NumNeighbors = CurrentNode->GetAdjacencyList().Num();
-
-        //UE_LOG(LogTemp, Warning, TEXT("Num neighbors: %d"), NumNeighbors);
 
         for (UNodeBase* NeighborNode : CurrentNode->GetAdjacencyList())
         {
