@@ -105,12 +105,6 @@ public:
 protected:
     virtual void OnRegister() override;
 
-    UFUNCTION(BlueprintCallable, BlueprintPure)
-    static bool IsSlotFull(const FInventorySlot& SlotToCheck);
-
-    UFUNCTION(BlueprintCallable, BlueprintPure)
-    static bool IsSlotEmpty(const FInventorySlot& SlotToCheck);
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
     int NumberOfSlots;
 

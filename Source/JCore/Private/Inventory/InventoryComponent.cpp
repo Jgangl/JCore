@@ -98,7 +98,7 @@ bool UInventoryComponent::TryAddItem(UItemDataAsset* ItemToAdd, const int Amount
     {
         FInventorySlot InventorySlot = this->InventorySlots[i];
 
-        if (IsSlotFull(InventorySlot))
+        if (FInventorySlot::IsSlotFull(InventorySlot))
         {
             continue;
         }
@@ -223,7 +223,7 @@ bool UInventoryComponent::TryRemoveItem(UItemDataAsset* ItemToRemove, int Amount
         FInventorySlot InventorySlot = this->InventorySlots[i];
 
         // Ignore empty slots and items that don't match the given item
-        if (this->IsSlotEmpty(InventorySlot) || InventorySlot.Item != ItemToRemove) continue;
+        if (FInventorySlot::IsSlotEmpty(InventorySlot) || InventorySlot.Item != ItemToRemove) continue;
 
         const int32 NumItemsRemovedAttempted = NumItemsRemoved + InventorySlot.CurrentStackSize;
 
@@ -360,7 +360,7 @@ bool UInventoryComponent::ContainsItemAmount(UItemDataAsset* ItemToCheck, const 
     {
         const FInventorySlot InventorySlot = this->InventorySlots[i];
 
-        if (this->IsSlotEmpty(InventorySlot))
+        if (FInventorySlot::IsSlotEmpty(InventorySlot))
         {
             continue;
         }
@@ -393,7 +393,7 @@ bool UInventoryComponent::HasAvailableSpaceForItem(UItemDataAsset* ItemToCheck, 
     {
         const FInventorySlot& InventorySlot = this->InventorySlots[i];
 
-        if (this->IsSlotFull(InventorySlot))
+        if (FInventorySlot::IsSlotFull(InventorySlot))
         {
             continue;
         }
@@ -404,7 +404,7 @@ bool UInventoryComponent::HasAvailableSpaceForItem(UItemDataAsset* ItemToCheck, 
             NumAvailableSpots += MaxStackSize - InventorySlot.CurrentStackSize;
         }
 
-        if (this->IsSlotEmpty(InventorySlot))
+        if (FInventorySlot::IsSlotEmpty(InventorySlot))
         {
             NumAvailableSpots += MaxStackSize;
         }
@@ -439,7 +439,7 @@ int32 UInventoryComponent::ContainsItem(UItemDataAsset* ItemToCheck)
     {
         const FInventorySlot InventorySlot = this->InventorySlots[i];
 
-        if (this->IsSlotEmpty(InventorySlot))
+        if (FInventorySlot::IsSlotEmpty(InventorySlot))
         {
             continue;
         }
@@ -478,9 +478,9 @@ int32 UInventoryComponent::ContainsPartialStack(UItemDataAsset* ItemToCheck)
     {
         const FInventorySlot InventorySlot = this->InventorySlots[i];
 
-        if (this->IsSlotEmpty(InventorySlot)) continue;
+        if (FInventorySlot::IsSlotEmpty(InventorySlot)) continue;
 
-        if (ItemToCheck == InventorySlot.Item && !IsSlotFull(InventorySlot))
+        if (ItemToCheck == InventorySlot.Item && !FInventorySlot::IsSlotFull(InventorySlot))
         {
             return i;
         }
@@ -498,7 +498,7 @@ bool UInventoryComponent::HasAnyEmptySlots()
     {
         const FInventorySlot InventorySlot = this->InventorySlots[i];
 
-        if (this->IsSlotEmpty(InventorySlot))
+        if (FInventorySlot::IsSlotEmpty(InventorySlot))
         {
             bFull = false;
             break;
@@ -516,7 +516,7 @@ bool UInventoryComponent::IsInventoryEmpty()
     {
         const FInventorySlot InventorySlot = this->InventorySlots[i];
 
-        if (!this->IsSlotEmpty(InventorySlot))
+        if (!FInventorySlot::IsSlotEmpty(InventorySlot))
         {
             bEmpty = false;
             break;
@@ -531,22 +531,6 @@ void UInventoryComponent::SetNumberOfSlots(int InNumberOfSlots)
     this->NumberOfSlots = InNumberOfSlots;
 }
 
-bool UInventoryComponent::IsSlotFull(const FInventorySlot& SlotToCheck)
-{
-    UItemDataAsset* ItemDataAsset = SlotToCheck.Item;
-
-    if (!ItemDataAsset)
-    {
-        return false;
-    }
-
-    return SlotToCheck.CurrentStackSize == ItemDataAsset->GetMaxStackSize();
-}
-
-bool UInventoryComponent::IsSlotEmpty(const FInventorySlot& SlotToCheck)
-{
-    return SlotToCheck.Item == nullptr;
-}
 
 void UInventoryComponent::OnRep_InventorySlots()
 {

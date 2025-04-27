@@ -44,6 +44,39 @@ struct FInventorySlot
         CurrentStackSize = 0;
     }
 
+    /**
+     *  Is the given FInventorySlot full?
+     *
+     *  @param SlotToCheck  The FInventorySlot to check fullness
+     *
+     *  @return True if the given FInventorySlot is full
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    static bool IsSlotFull(const FInventorySlot& SlotToCheck)
+    {
+        UItemDataAsset* ItemDataAsset = SlotToCheck.Item;
+
+        if (!ItemDataAsset)
+        {
+            return false;
+        }
+
+        return SlotToCheck.CurrentStackSize == ItemDataAsset->GetMaxStackSize();
+    };
+
+    /**
+     *  Is the given FInventorySlot empty?
+     *
+     *  @param SlotToCheck  The FInventorySlot to check emptiness
+     *
+     *  @return True if the given FInventorySlot is empty
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    static bool IsSlotEmpty(const FInventorySlot& SlotToCheck)
+    {
+        return SlotToCheck.Item == nullptr;
+    }
+
     FORCEINLINE bool operator==(const FInventorySlot& OtherSlot) const
     {
         return (Item             == OtherSlot.Item &&
