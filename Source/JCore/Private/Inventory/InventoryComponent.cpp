@@ -12,17 +12,16 @@ UInventoryComponent::UInventoryComponent()
     this->SetIsReplicatedByDefault(true);
 }
 
-void UInventoryComponent::BeginPlay()
+void UInventoryComponent::OnRegister()
 {
-    Super::BeginPlay();
+    Super::OnRegister();
 
     if (!GetOwner()->HasAuthority())
     {
         return;
     }
 
-    this->InventorySlots.Init(FInventorySlot(), this->NumberOfSlots);
-    this->OnRep_InventorySlots();
+    this->InitializeInventorySlots();
 }
 
 void UInventoryComponent::SwapInventorySlots(int32 SourceIndex,
@@ -76,6 +75,12 @@ void UInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
     DOREPLIFETIME(UInventoryComponent, InventorySlots);
     DOREPLIFETIME(UInventoryComponent, NumberOfSlots);
+}
+
+void UInventoryComponent::InitializeInventorySlots()
+{
+    this->InventorySlots.Init(FInventorySlot(), this->NumberOfSlots);
+    this->OnItemChanged.Broadcast();
 }
 
 bool UInventoryComponent::TryAddItem(UItemDataAsset* ItemToAdd, const int Amount)
@@ -159,7 +164,7 @@ bool UInventoryComponent::TryAddItem(UItemDataAsset* ItemToAdd, const int Amount
         return true;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("ServerAddItem: Inventory Full"))
+    UE_LOG(LogTemp, Warning, TEXT("TryAddItem: Inventory Full"))
 
     return false;
 }
@@ -376,7 +381,7 @@ bool UInventoryComponent::HasAvailableSpaceForItem(UItemDataAsset* ItemToCheck, 
 {
     if (!ItemToCheck)
     {
-        UE_LOG(LogTemp, Error, TEXT("ItemToCheck is nullptr"));
+        UE_LOG(LogTemp, Error, TEXT("%hs : ItemToCheck is nullptr"), __FUNCTION__);
         return false;
     }
 
@@ -425,7 +430,7 @@ int32 UInventoryComponent::ContainsItem(UItemDataAsset* ItemToCheck)
     if (!ItemToCheck)
     {
         UE_LOG(LogTemp, Error, TEXT("ContainsItem: ItemToCheck was null"))
-        return false;
+        return 0;
     }
 
     int32 NumItems = 0;
@@ -545,7 +550,5 @@ bool UInventoryComponent::IsSlotEmpty(const FInventorySlot& SlotToCheck)
 
 void UInventoryComponent::OnRep_InventorySlots()
 {
-    // Called on clients when InventorySlots is updated.
-
     this->OnItemChanged.Broadcast();
 }

@@ -33,6 +33,8 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnItemRemoved OnItemRemoved;
 
+    void InitializeInventorySlots();
+
     UFUNCTION(BlueprintCallable)
     bool TryAddItem(UItemDataAsset* ItemToAdd, const int Amount = 1);
 
@@ -101,7 +103,7 @@ public:
     void ServerSwapInventorySlots(int32 SourceIndex, UInventoryComponent* SourceInventory, int32 TargetIndex);
 
 protected:
-    virtual void BeginPlay() override;
+    virtual void OnRegister() override;
 
     UFUNCTION(BlueprintCallable, BlueprintPure)
     static bool IsSlotFull(const FInventorySlot& SlotToCheck);
@@ -116,6 +118,7 @@ protected:
     TArray<FInventorySlot> InventorySlots;
 
 private:
+    //! @brief  Called on clients when InventorySlots is updated
     UFUNCTION()
     void OnRep_InventorySlots();
 };
