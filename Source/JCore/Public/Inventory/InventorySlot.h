@@ -51,7 +51,6 @@ struct FInventorySlot
      *
      *  @return True if the given FInventorySlot is full
      */
-    UFUNCTION(BlueprintCallable, BlueprintPure)
     static bool IsSlotFull(const FInventorySlot& SlotToCheck)
     {
         UItemDataAsset* ItemDataAsset = SlotToCheck.Item;
@@ -71,7 +70,6 @@ struct FInventorySlot
      *
      *  @return True if the given FInventorySlot is empty
      */
-    UFUNCTION(BlueprintCallable, BlueprintPure)
     static bool IsSlotEmpty(const FInventorySlot& SlotToCheck)
     {
         return SlotToCheck.Item == nullptr;

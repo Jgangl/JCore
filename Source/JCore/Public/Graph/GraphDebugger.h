@@ -16,14 +16,14 @@ class JCORE_API AGraphDebugger : public AActor
 public:
     AGraphDebugger();
 
+    virtual void BeginPlay() override;
+
     virtual void Tick(float DeltaSeconds) override;
 
     void DrawGraph();
 
     UFUNCTION(BlueprintCallable)
     void SetGraph(UGraphBase* InGraph);
-
-
 
 protected:
     UPROPERTY(EditAnywhere)

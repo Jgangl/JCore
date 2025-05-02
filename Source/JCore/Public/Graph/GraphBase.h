@@ -42,6 +42,12 @@ public:
     TArray<UNodeBase*> GetNodes();
 
     UFUNCTION(BlueprintCallable)
+    TArray<UNodeBase*> GetRootNodes();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure)
+    bool IsDirected();
+
+    UFUNCTION(BlueprintCallable)
     bool BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode);
 
     UFUNCTION(BlueprintCallable)
@@ -54,7 +60,7 @@ public:
     FOnNodeRemoved OnNodeRemoved;
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<UNodeBase*> Nodes;
 
     UPROPERTY(EditAnywhere)

@@ -127,6 +127,31 @@ TArray<UNodeBase*> UGraphBase::GetNodes()
     return this->Nodes;
 }
 
+TArray<UNodeBase*> UGraphBase::GetRootNodes()
+{
+    TArray<UNodeBase*> RootNodes;
+
+    for (UNodeBase* Node : this->Nodes)
+    {
+        if (!Node)
+        {
+            continue;
+        }
+
+        if (Node->GetAdjacencyList().IsEmpty())
+        {
+            RootNodes.Add(Node);
+        }
+    }
+
+    return RootNodes;
+}
+
+bool UGraphBase::IsDirected()
+{
+    return this->bIsDirectedGraph;
+}
+
 bool UGraphBase::BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode)
 {
     if (!SourceNode)

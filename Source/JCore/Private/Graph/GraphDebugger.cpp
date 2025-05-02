@@ -42,10 +42,9 @@ AGraphDebugger::AGraphDebugger()
     this->bEnabled = true;
 }
 
-void AGraphDebugger::Tick(float DeltaSeconds)
+void AGraphDebugger::BeginPlay()
 {
-    Super::Tick(DeltaSeconds);
-
+    Super::BeginPlay();
 
     UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
 
@@ -65,7 +64,12 @@ void AGraphDebugger::Tick(float DeltaSeconds)
 
     UGraphBase* FoundGraph = GraphSubsystem->GetGraph();
 
-    this->SetGraph(FoundGraph);
+    //this->SetGraph(FoundGraph);
+}
+
+void AGraphDebugger::Tick(float DeltaSeconds)
+{
+    Super::Tick(DeltaSeconds);
 
     if (this->bEnabled)
     {
@@ -120,13 +124,35 @@ void AGraphDebugger::DrawGraph()
         DrawDebugSolidBox(GetWorld(), Center, FVector(20.0f, 20.0f, 20.0f), FColor::Blue, false, -1, SDPG_MAX);
     }
 
-    // Draw Edges between Nodes
-    for (FEdgePair UniqueEdge: UniqueEdges)
+    if (this->Graph->IsDirected())
     {
-        FVector Direction = (UniqueEdge.Key->GetLocation() - UniqueEdge.Value->GetLocation());
-        Direction.Normalize();
+        // Draw Edges between Nodes
+        for (FEdgePair UniqueEdge: UniqueEdges)
+        {
+            FVector Direction = (UniqueEdge.Key->GetLocation() - UniqueEdge.Value->GetLocation());
+            Direction.Normalize();
 
-        DrawDebugLine(GetWorld(), UniqueEdge.Key->GetLocation() - (Direction*20.0f), UniqueEdge.Value->GetLocation() + (Direction*20.0f), FColor::Yellow, false, -1, SDPG_Foreground, 3);
+            DrawDebugDirectionalArrow(GetWorld(),
+                                      UniqueEdge.Key->GetLocation() - (Direction*20.0f),
+                                      UniqueEdge.Value->GetLocation() + (Direction*20.0f),
+                                      200.0f,
+                                      FColor::Yellow,
+                                      false,
+                                      -1,
+                                      SDPG_Foreground,
+                                      3);
+        }
+    }
+    else
+    {
+        // Draw Edges between Nodes
+        for (FEdgePair UniqueEdge: UniqueEdges)
+        {
+            FVector Direction = (UniqueEdge.Key->GetLocation() - UniqueEdge.Value->GetLocation());
+            Direction.Normalize();
+
+            DrawDebugLine(GetWorld(), UniqueEdge.Key->GetLocation() - (Direction*20.0f), UniqueEdge.Value->GetLocation() + (Direction*20.0f), FColor::Yellow, false, -1, SDPG_Foreground, 3);
+        }
     }
 }
 
