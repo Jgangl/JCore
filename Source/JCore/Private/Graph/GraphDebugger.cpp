@@ -73,8 +73,6 @@ void AGraphDebugger::DrawGraph()
         return;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("Num nodes: %d"), this->Graph->GetNodes().Num());
-
     FVector Offset = FVector(0.0f, 0.0f, 100.0f);
 
     // Draw Node locations
@@ -141,13 +139,14 @@ void AGraphDebugger::DrawUpdateOrder()
         FVector Center = RootNode->GetLocation() + FVector(0.0f, 0.0f, 200.0f);
         DrawDebugSolidBox(GetWorld(), Center, FVector(20.0f, 20.0f, 20.0f), FColor::Red, false, -1, SDPG_MAX);
 
-
-
         TQueue<UItemTransportNode*> UnvisitedNodes;
         TArray<UItemTransportNode*> VisitedNodes;
 
         VisitedNodes.Add(RootNode);
         UnvisitedNodes.Enqueue(RootNode);
+
+        // Not sure why this is necessary, but without it the debug strings aren't drawn correctly
+        FlushDebugStrings(GetWorld());
 
         int32 CurrentUpdate = 1;
 
@@ -161,7 +160,7 @@ void AGraphDebugger::DrawUpdateOrder()
             FVector Loc = CurrentNode->GetLocation() + FVector(0.0f, 0.0f, 150.0f);
 
             // Draw a number;
-            DrawDebugString(GetWorld(), Loc, FString::FromInt(CurrentUpdate));
+            DrawDebugString(GetWorld(), Loc, FString::FromInt(CurrentUpdate), this);
             CurrentUpdate++;
 
             for (UItemTransportNode* ChildrenNode : ItemTransportGraph->GetChildrenNodes(CurrentNode))
