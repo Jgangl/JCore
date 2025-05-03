@@ -22,7 +22,10 @@ void UGraphNodeComponent::OnRegister()
 {
     Super::OnRegister();
 
-    this->Node = NewObject<UNodeBase>(this, this->NodeClass);
+    if (this->NodeClass)
+    {
+        this->Node = NewObject<UNodeBase>(this, this->NodeClass);
+    }
 }
 
 UNodeBase* UGraphNodeComponent::GetNode() const

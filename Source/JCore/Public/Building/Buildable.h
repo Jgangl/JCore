@@ -70,6 +70,8 @@ public:
 
     virtual UBuildingConnectionComponent* GetClosestConnectionToLocation(const FVector& InLocation) const override;
 
+    virtual UBuildingConnectionComponent* GetOppositeTypeConnection(bool bInput) const override;
+
     virtual bool HasOpenConnections() const override;
 
     void GetNeighborSnapLocations(TArray<FVector>& OutSnapLocations);

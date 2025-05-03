@@ -414,7 +414,21 @@ void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnecti
     FromSnapConnection->SetConnectedComponent(ToSnapConnection);
     ToSnapConnection->SetConnectedComponent(FromSnapConnection);
 
-    Graph->AddEdge(SnapToNode->GetNode(), GraphNodeComponent->GetNode());
+    UNodeBase* InputNode = nullptr;
+    UNodeBase* OutputNode = nullptr;
+
+    if (ToSnapConnection->IsInput())
+    {
+        InputNode = GraphNodeComponent->GetNode();
+        OutputNode = SnapToNode->GetNode();
+    }
+    else
+    {
+        InputNode = SnapToNode->GetNode();
+        OutputNode = GraphNodeComponent->GetNode();
+    }
+
+    Graph->AddEdge(InputNode, OutputNode);
 }
 
 void ABuildable::GetOpenConnectionComponents(TArray<UBuildingConnectionComponent*>& OutConnectionComponents) const
@@ -451,6 +465,23 @@ UBuildingConnectionComponent* ABuildable::GetClosestConnectionToLocation(const F
     TArray<USceneComponent*> ConnectionComponents(MoveTemp(OpenConnections));
 
     return Cast<UBuildingConnectionComponent>(UJCoreUtils::GetClosestSceneComponentToPoint(InLocation, ConnectionComponents));
+}
+
+UBuildingConnectionComponent* ABuildable::GetOppositeTypeConnection(bool bInput) const
+{
+    TArray<UBuildingConnectionComponent*> OpenConnections;
+    this->GetOpenConnectionComponents(OpenConnections);
+
+    for (UBuildingConnectionComponent* BuildingConnectionComponent : OpenConnections)
+    {
+        if (bInput != BuildingConnectionComponent->IsInput())
+        {
+            return BuildingConnectionComponent;
+        }
+    }
+
+    // No connection components found of the opposite type
+    return nullptr;
 }
 
 bool ABuildable::HasOpenConnections() const

@@ -23,6 +23,7 @@ public:
     UFUNCTION(BlueprintCallable)
     UNodeBase* GetNode() const;
 
+    UFUNCTION(BlueprintCallable)
     void SetNodeClass(TSubclassOf<UNodeBase> InNodeClass);
 
     void SetNodeLocation(const FVector &InLocation);

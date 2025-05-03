@@ -741,7 +741,14 @@ void UBuildingComponent::HandleBuildingPreview(TArray<FHitResult>& OutHits)
             DrawDebugSphere(GetWorld(), End, 20.0f, 10, FColor::Green);
         }
 
-        UBuildingConnectionComponent* BuildingPreviewConnection = BuildingPreviewOpenConnections[this->BuildingPreviewSnapIndex];
+        //UBuildingConnectionComponent* BuildingPreviewConnection = BuildingPreviewOpenConnections[this->BuildingPreviewSnapIndex];
+        UBuildingConnectionComponent* BuildingPreviewConnection = this->CurrentBuildingPreview->GetOppositeTypeConnection(ConnectionToSnapTo->IsInput());
+
+        if (!BuildingPreviewConnection)
+        {
+            UE_LOG(LogTemp, Error, TEXT("BuildingPreviewConnection of the opposite type was not found"));
+            return;
+        }
 
         FTransform PreviewSnapTransformWorld    = BuildingPreviewConnection->GetSnapTransform();
         FTransform PreviewSnapRelativeTransform = PreviewSnapTransformWorld.GetRelativeTransform(this->CurrentBuildingPreview->GetTransform());

@@ -28,5 +28,7 @@ class JCORE_API IBuildableInterface
 
     virtual UBuildingConnectionComponent* GetClosestConnectionToLocation(const FVector& InLocation) const = 0;
 
+    virtual UBuildingConnectionComponent* GetOppositeTypeConnection(bool bInput) const = 0;
+
     virtual bool HasOpenConnections() const = 0;
 };
