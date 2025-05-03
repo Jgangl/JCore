@@ -8,6 +8,7 @@
 #include "JCoreUtils.h"
 #include "Graph/GraphNodeComponent.h"
 #include "Graph/GraphSubsystem.h"
+#include "SteamFactory/ConveyorManager.h"
 
 ABuildable::ABuildable()
 {
@@ -363,26 +364,13 @@ void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnecti
 {
     this->SetIsPreviewing(false);
 
-    TArray<UNodeBase*> OutNeighborNodes;
-
-    if (FromSnapConnection && ToSnapConnection)
+    if (!FromSnapConnection || !ToSnapConnection)
     {
-        FromSnapConnection->SetConnectedComponent(ToSnapConnection);
-        ToSnapConnection->SetConnectedComponent(FromSnapConnection);
-
-        AActor* SnapToOwner = ToSnapConnection->GetOwner();
-        if (!SnapToOwner)
-        {
-            UE_LOG(LogTemp, Error, TEXT("%hs : OtherOwner is nullptr"), __FUNCTION__);
-            return;
-        }
-
-        if (UGraphNodeComponent* SnapToNode = SnapToOwner->GetComponentByClass<UGraphNodeComponent>())
-        {
-            OutNeighborNodes.Add(SnapToNode->GetNode());
-        }
+        return;
     }
 
+    FromSnapConnection->SetConnectedComponent(ToSnapConnection);
+    ToSnapConnection->SetConnectedComponent(FromSnapConnection);
 
     // TODO: Move this section of code to a function
     UGraphNodeComponent* GraphNodeComponent = Cast<UGraphNodeComponent>(this->GetComponentByClass(UGraphNodeComponent::StaticClass()));
@@ -393,23 +381,33 @@ void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnecti
 
     GraphNodeComponent->SetNodeLocation(this->GetActorLocation());
 
-    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
-
-    if (!GameInstance)
+    AActor* SnapToOwner = ToSnapConnection->GetOwner();
+    if (!SnapToOwner)
     {
+        UE_LOG(LogTemp, Error, TEXT("%hs : OtherOwner is nullptr"), __FUNCTION__);
         return;
     }
 
-    UGraphSubsystem* GraphSubsystem = GameInstance->GetSubsystem<UGraphSubsystem>();
+    UGraphNodeComponent* SnapToNode = SnapToOwner->GetComponentByClass<UGraphNodeComponent>();
 
-    if (!GraphSubsystem)
+    if (!SnapToNode)
     {
+        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a graph node component on the snapped connection"));
         return;
     }
 
-    if (UGraphBase* Graph = GraphSubsystem->GetGraph())
+    AConveyorManager* ConveyorManager = Cast<AConveyorManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AConveyorManager::StaticClass()));
+
+    if (!ConveyorManager)
     {
-        Graph->AddNodeWithEdges(GraphNodeComponent->GetNode(), OutNeighborNodes);
+        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a conveyor manager"));
+        return;
+    }
+
+    if (UGraphBase* Graph = ConveyorManager->GetGraph())
+    {
+        Graph->AddNode(GraphNodeComponent->GetNode());
+        Graph->AddEdge(SnapToNode->GetNode(), GraphNodeComponent->GetNode());
     }
 }
 

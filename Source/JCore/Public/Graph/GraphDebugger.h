@@ -23,7 +23,7 @@ public:
     UFUNCTION(BlueprintCallable)
     void SetGraph(UGraphBase* InGraph);
 
-
+    void DrawUpdateOrder();
 
 protected:
     UPROPERTY(EditAnywhere)

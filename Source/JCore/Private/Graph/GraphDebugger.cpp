@@ -2,8 +2,8 @@
 
 #include "Graph/GraphDebugger.h"
 
-#include "Graph/GraphSubsystem.h"
 #include "Kismet/GameplayStatics.h"
+#include "SteamFactory/ConveyorManager.h"
 
 struct FEdgePair
 {
@@ -46,30 +46,22 @@ void AGraphDebugger::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
+    AConveyorManager* ConveyorManager = Cast<AConveyorManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AConveyorManager::StaticClass()));
 
-    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
-
-    if (!GameInstance)
+    if (!ConveyorManager)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Game Instance null"));
+        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a conveyor manager"));
         return;
     }
 
-    UGraphSubsystem* GraphSubsystem = GameInstance->GetSubsystem<UGraphSubsystem>();
-
-    if (!GraphSubsystem)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("GraphSubsystem null"));
-        return;
-    }
-
-    UGraphBase* FoundGraph = GraphSubsystem->GetGraph();
+    UGraphBase* FoundGraph = ConveyorManager->GetGraph();
 
     this->SetGraph(FoundGraph);
 
     if (this->bEnabled)
     {
         this->DrawGraph();
+        this->DrawUpdateOrder();
     }
 }
 
@@ -81,45 +73,37 @@ void AGraphDebugger::DrawGraph()
         return;
     }
 
-    TSet<FEdgePair> UniqueEdges;
-/*
+    UE_LOG(LogTemp, Warning, TEXT("Num nodes: %d"), this->Graph->GetNodes().Num());
+
+    FVector Offset = FVector(0.0f, 0.0f, 100.0f);
+
     // Draw Node locations
     for (UNodeBase* Node : this->Graph->GetNodes())
     {
         if (!Node) continue;
 
-        FVector Center = Node->GetLocation();
-
-        for (UNodeBase* NeighborNode : Node->GetAdjacencyList())
-        {
-            if (!NeighborNode) continue;
-
-            FVector Direction = (NeighborNode->GetLocation() - Node->GetLocation());
-            Direction.Normalize();
-
-            FEdgePair Edge;
-            Edge.Key = Node;
-            Edge.Value = NeighborNode;
-
-            bool EdgeIsDuplicate = false;
-
-            for (FEdgePair UniqueEdge: UniqueEdges)
-            {
-                if (UniqueEdge == Edge)
-                {
-                    EdgeIsDuplicate = true;
-                }
-            }
-
-            if (!EdgeIsDuplicate)
-            {
-                UniqueEdges.Add(Edge);
-            }
-        }
+        FVector Center = Node->GetLocation() + Offset;
 
         DrawDebugSolidBox(GetWorld(), Center, FVector(20.0f, 20.0f, 20.0f), FColor::Blue, false, -1, SDPG_MAX);
     }
-*/
+
+    for (UEdgeBase* Edge : this->Graph->GetEdges())
+    {
+        FVector Direction = (Edge->Source->GetLocation() - Edge->Destination->GetLocation());
+        Direction.Normalize();
+
+        DrawDebugDirectionalArrow(GetWorld(),
+                                  Edge->Source->GetLocation() - (Direction*20.0f) + Offset,
+                                  Edge->Destination->GetLocation() + (Direction*20.0f) + Offset,
+                                  200.0f,
+                                  FColor::Yellow,
+                                  false,
+                                  -1,
+                                  SDPG_Foreground,
+                                  3);
+    }
+
+/*
     // Draw Edges between Nodes
     for (FEdgePair UniqueEdge: UniqueEdges)
     {
@@ -128,10 +112,68 @@ void AGraphDebugger::DrawGraph()
 
         DrawDebugLine(GetWorld(), UniqueEdge.Key->GetLocation() - (Direction*20.0f), UniqueEdge.Value->GetLocation() + (Direction*20.0f), FColor::Yellow, false, -1, SDPG_Foreground, 3);
     }
+*/
 }
 
 void AGraphDebugger::SetGraph(UGraphBase* InGraph)
 {
     this->Graph = InGraph;
+}
+
+void AGraphDebugger::DrawUpdateOrder()
+{
+    if (!this->Graph)
+    {
+        return;
+    }
+
+    UItemTransportGraph* ItemTransportGraph = Cast<UItemTransportGraph>(this->Graph);
+
+    if (!ItemTransportGraph) return;
+
+    TArray<UItemTransportNode*> RootNodes = ItemTransportGraph->GetRootNodes();
+
+    for (UItemTransportNode* RootNode : RootNodes)
+    {
+        if (!RootNode) continue;
+
+        // Draw root nodes
+        FVector Center = RootNode->GetLocation() + FVector(0.0f, 0.0f, 200.0f);
+        DrawDebugSolidBox(GetWorld(), Center, FVector(20.0f, 20.0f, 20.0f), FColor::Red, false, -1, SDPG_MAX);
+
+
+
+        TQueue<UItemTransportNode*> UnvisitedNodes;
+        TArray<UItemTransportNode*> VisitedNodes;
+
+        VisitedNodes.Add(RootNode);
+        UnvisitedNodes.Enqueue(RootNode);
+
+        int32 CurrentUpdate = 1;
+
+        while (!UnvisitedNodes.IsEmpty())
+        {
+            UItemTransportNode* CurrentNode;
+            UnvisitedNodes.Dequeue(CurrentNode);
+
+            if (!CurrentNode) continue;
+
+            FVector Loc = CurrentNode->GetLocation() + FVector(0.0f, 0.0f, 150.0f);
+
+            // Draw a number;
+            DrawDebugString(GetWorld(), Loc, FString::FromInt(CurrentUpdate));
+            CurrentUpdate++;
+
+            for (UItemTransportNode* ChildrenNode : ItemTransportGraph->GetChildrenNodes(CurrentNode))
+            {
+                // Don't visit the same node twice
+                if (!VisitedNodes.Contains(ChildrenNode))
+                {
+                    VisitedNodes.Add(ChildrenNode);
+                    UnvisitedNodes.Enqueue(ChildrenNode);
+                }
+            }
+        }
+    }
 }
 
