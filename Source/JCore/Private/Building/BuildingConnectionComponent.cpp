@@ -18,6 +18,8 @@ UBuildingConnectionComponent::UBuildingConnectionComponent()
     this->SetArrowLength(30.0f);
 
     this->ConnectedComponent = nullptr;
+
+    this->bIsInput = true;
 }
 
 void UBuildingConnectionComponent::OnComponentDestroyed(bool bDestroyingHierarchy)
@@ -69,5 +71,15 @@ void UBuildingConnectionComponent::DisconnectConnections()
 const FTransform& UBuildingConnectionComponent::GetSnapTransform() const
 {
     return this->GetComponentTransform();
+}
+
+bool UBuildingConnectionComponent::IsInput()
+{
+    return this->bIsInput;
+}
+
+void UBuildingConnectionComponent::SetIsInput(bool InbIsInput)
+{
+    this->bIsInput = InbIsInput;
 }
 

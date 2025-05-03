@@ -364,14 +364,6 @@ void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnecti
 {
     this->SetIsPreviewing(false);
 
-    if (!FromSnapConnection || !ToSnapConnection)
-    {
-        return;
-    }
-
-    FromSnapConnection->SetConnectedComponent(ToSnapConnection);
-    ToSnapConnection->SetConnectedComponent(FromSnapConnection);
-
     // TODO: Move this section of code to a function
     UGraphNodeComponent* GraphNodeComponent = Cast<UGraphNodeComponent>(this->GetComponentByClass(UGraphNodeComponent::StaticClass()));
     if (!GraphNodeComponent)
@@ -380,6 +372,29 @@ void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnecti
     }
 
     GraphNodeComponent->SetNodeLocation(this->GetActorLocation());
+
+    AConveyorManager* ConveyorManager = Cast<AConveyorManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AConveyorManager::StaticClass()));
+
+    if (!ConveyorManager)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a conveyor manager"));
+        return;
+    }
+
+    UGraphBase* Graph = ConveyorManager->GetGraph();
+
+    if (!Graph)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a graph"));
+        return;
+    }
+
+    Graph->AddNode(GraphNodeComponent->GetNode());
+
+    if (!FromSnapConnection || !ToSnapConnection)
+    {
+        return;
+    }
 
     AActor* SnapToOwner = ToSnapConnection->GetOwner();
     if (!SnapToOwner)
@@ -396,19 +411,10 @@ void ABuildable::CompleteBuilding(UBuildingConnectionComponent* FromSnapConnecti
         return;
     }
 
-    AConveyorManager* ConveyorManager = Cast<AConveyorManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AConveyorManager::StaticClass()));
+    FromSnapConnection->SetConnectedComponent(ToSnapConnection);
+    ToSnapConnection->SetConnectedComponent(FromSnapConnection);
 
-    if (!ConveyorManager)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a conveyor manager"));
-        return;
-    }
-
-    if (UGraphBase* Graph = ConveyorManager->GetGraph())
-    {
-        Graph->AddNode(GraphNodeComponent->GetNode());
-        Graph->AddEdge(SnapToNode->GetNode(), GraphNodeComponent->GetNode());
-    }
+    Graph->AddEdge(SnapToNode->GetNode(), GraphNodeComponent->GetNode());
 }
 
 void ABuildable::GetOpenConnectionComponents(TArray<UBuildingConnectionComponent*>& OutConnectionComponents) const

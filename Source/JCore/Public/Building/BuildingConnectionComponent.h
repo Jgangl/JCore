@@ -36,11 +36,21 @@ public:
 
     const FTransform& GetSnapTransform() const;
 
+    UFUNCTION(BlueprintCallable)
+    bool IsInput();
+
+    UFUNCTION(BlueprintCallable)
+    void SetIsInput(bool InbIsInput);
+
     UPROPERTY(BlueprintAssignable)
     FOnConnectionConnected OnConnectionConnected;
 
     UPROPERTY(BlueprintAssignable)
     FOnConnectionDisconnected OnConnectionDisconnected;
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    bool bIsInput;
 
 private:
     UPROPERTY(EditAnywhere)

@@ -70,13 +70,15 @@ void UBuildingComponent::TickComponent(float DeltaTime,
 
     TArray<FHitResult> OutHits;
 
+    TArray<AActor*> ActorsToIgnore = {this->CurrentBuildingPreview};
+
     if (this->bFirstPersonInteraction)
     {
-        UJCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld());
+        UJCoreUtils::GetFirstPersonHitResults(OutHits, GetWorld(), ActorsToIgnore);
     }
     else
     {
-        UJCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld());
+        UJCoreUtils::GetHitResultsUnderCursor(OutHits, GetWorld(), ActorsToIgnore);
     }
 
     if (OutHits.Num() == 0)
