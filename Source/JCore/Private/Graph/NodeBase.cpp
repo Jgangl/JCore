@@ -5,7 +5,7 @@ UNodeBase::UNodeBase()
 {
     this->MaxConnections = -1;
 }
-
+/*
 void UNodeBase::AddConnectedNode(UNodeBase* ConnectedNode)
 {
     if (!ConnectedNode)
@@ -49,7 +49,7 @@ TArray<UNodeBase*> UNodeBase::GetAdjacencyList()
 {
     return this->AdjacencyList;
 }
-
+*/
 void UNodeBase::SetLocation(const FVector &InLocation)
 {
     this->Location = InLocation;

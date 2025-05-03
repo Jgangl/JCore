@@ -43,12 +43,24 @@ bool UGraphBase::RemoveNode(UNodeBase* NodeToRemove)
         return false;
     }
 
-    // Delete all edges to the Node that is being removed
-    for (UNodeBase* Node : this->Nodes)
+    TArray<uint32> EdgeIndexesToRemove;
+    for (int32 i = 0; i < this->Edges.Num(); i++ )
     {
-        if (!Node) continue;
+        if (!this->Edges[i]) continue;
 
-        Node->RemoveConnectedNode(NodeToRemove);
+        if (this->Edges[i]->Source == NodeToRemove || this->Edges[i]->Destination == NodeToRemove)
+        {
+            EdgeIndexesToRemove.Add(i);
+        }
+    }
+
+    // Remove edges in reverse order
+    for( int32 i = this->Edges.Num() - 1; i >= 0; i-- )
+    {
+        if (EdgeIndexesToRemove.Contains(i))
+        {
+            this->Edges.RemoveAt(i);
+        }
     }
 
     this->Nodes.Remove(NodeToRemove);
@@ -59,47 +71,41 @@ bool UGraphBase::RemoveNode(UNodeBase* NodeToRemove)
 
 void UGraphBase::AddEdge(UNodeBase* FromNode, UNodeBase* ToNode)
 {
-    if (!FromNode)
+    if (!FromNode || !ToNode)
     {
         return;
     }
 
-    if (!ToNode)
-    {
-        return;
-    }
+    // TODO: Don't allow duplicate edges?
 
-    FromNode->AddConnectedNode(ToNode);
+    UEdgeBase* Edge = NewObject<UEdgeBase>(this);
 
-    // Also add edge to ToNode if this is an undirected graph
-    if (!this->bIsDirectedGraph)
-    {
-        ToNode->AddConnectedNode(FromNode);
-    }
+    Edge->Source      = FromNode;
+    Edge->Destination = ToNode;
 }
 
 void UGraphBase::RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode)
 {
-    if (!FromNode)
+    if (!FromNode || !ToNode)
     {
         return;
     }
 
-    if (!ToNode)
+    UEdgeBase* EdgeToRemove = nullptr;
+
+    for (UEdgeBase* Edge : this->Edges)
     {
-        return;
+        if (!Edge) continue;
+
+        if (Edge->Source == FromNode && Edge->Destination == ToNode)
+        {
+            EdgeToRemove = Edge;
+        }
     }
 
-    // Remove node from first node's adjacency list
-    if (this->Nodes.Contains(FromNode))
+    if (EdgeToRemove)
     {
-        FromNode->RemoveEdge(ToNode);
-    }
-
-    // Remove node from second node's adjacency list
-    if (this->Nodes.Contains(ToNode))
-    {
-        ToNode->RemoveEdge(FromNode);
+        this->Edges.Remove(EdgeToRemove);
     }
 }
 
@@ -110,16 +116,7 @@ int32 UGraphBase::GetNumNodes()
 
 int32 UGraphBase::GetNumEdges()
 {
-    int32 NumEdges = 0;
-
-    for (UNodeBase* Node : this->Nodes)
-    {
-        if (!Node) continue;
-
-        NumEdges += Node->GetAdjacencyList().Num();
-    }
-
-    return NumEdges;
+    return this->Edges.Num();
 }
 
 TArray<UNodeBase*> UGraphBase::GetNodes()
@@ -127,24 +124,9 @@ TArray<UNodeBase*> UGraphBase::GetNodes()
     return this->Nodes;
 }
 
-TArray<UNodeBase*> UGraphBase::GetRootNodes()
+TArray<UEdgeBase*> UGraphBase::GetEdges()
 {
-    TArray<UNodeBase*> RootNodes;
-
-    for (UNodeBase* Node : this->Nodes)
-    {
-        if (!Node)
-        {
-            continue;
-        }
-
-        if (Node->GetAdjacencyList().IsEmpty())
-        {
-            RootNodes.Add(Node);
-        }
-    }
-
-    return RootNodes;
+    return this->Edges;
 }
 
 bool UGraphBase::IsDirected()
@@ -152,6 +134,20 @@ bool UGraphBase::IsDirected()
     return this->bIsDirectedGraph;
 }
 
+bool UGraphBase::IsRootNode(UNodeBase* InNode)
+{
+    for (UEdgeBase* Edge : this->Edges)
+    {
+        if (Edge && Edge->Source == InNode)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*
 bool UGraphBase::BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode)
 {
     if (!SourceNode)
@@ -243,4 +239,4 @@ bool UGraphBase::BreadthFirstSearchNodes(UNodeBase* SourceNode, TArray<UNodeBase
 
     return false;
 }
-
+*/
