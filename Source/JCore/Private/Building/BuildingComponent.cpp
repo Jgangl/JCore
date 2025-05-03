@@ -90,6 +90,20 @@ void UBuildingComponent::TickComponent(float DeltaTime,
         return;
     }
 
+    if (this->ConveyorBuildModeState == EBuildModeState::InProcess)
+    {
+        TArray<FTransform> StraightConveyorTransforms;
+
+        FVector EndConveyorLocation = this->GetGridLocation(OutHits[0].Location);
+
+        if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
+        {
+            Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, EndConveyorLocation);
+        }
+
+        return;
+    }
+
     if (this->CurrentBuildingPreview)
     {
         this->HandleBuildingPreview(OutHits);
@@ -129,6 +143,8 @@ void UBuildingComponent::ServerCancelBuilding_Implementation()
 {
     this->SetBuildMode(false);
     this->ClearBuildingPreview(true);
+
+    this->ConveyorBuildModeState = EBuildModeState::None;
 }
 
 void UBuildingComponent::ServerStartBuildPreview_Implementation(TSubclassOf<AActor> ActorClassToPreview)
