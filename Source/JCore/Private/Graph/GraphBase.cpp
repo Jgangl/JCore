@@ -43,13 +43,7 @@ bool UGraphBase::RemoveNode(UNodeBase* NodeToRemove)
         return false;
     }
 
-    // Delete all edges to the Node that is being removed
-    for (UNodeBase* Node : this->Nodes)
-    {
-        if (!Node) continue;
-
-        Node->RemoveConnectedNode(NodeToRemove);
-    }
+    // TODO: Delete all edges to the Node that is being removed
 
     this->Nodes.Remove(NodeToRemove);
     this->OnNodeRemoved.Broadcast(NodeToRemove);
@@ -59,33 +53,21 @@ bool UGraphBase::RemoveNode(UNodeBase* NodeToRemove)
 
 void UGraphBase::AddEdge(UNodeBase* FromNode, UNodeBase* ToNode)
 {
-    if (!FromNode)
+    if (!FromNode || !ToNode)
     {
         return;
     }
 
-    if (!ToNode)
-    {
-        return;
-    }
+    UEdgeBase* NewEdge = NewObject<UEdgeBase>(this);
+    NewEdge->Source = FromNode;
+    NewEdge->Destination = ToNode;
 
-    FromNode->AddConnectedNode(ToNode);
-
-    // Also add edge to ToNode if this is an undirected graph
-    if (!this->bIsDirectedGraph)
-    {
-        ToNode->AddConnectedNode(FromNode);
-    }
+    this->Edges.Add(NewEdge);
 }
-
+/*
 void UGraphBase::RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode)
 {
-    if (!FromNode)
-    {
-        return;
-    }
-
-    if (!ToNode)
+    if (!FromNode || !ToNode)
     {
         return;
     }
@@ -102,7 +84,7 @@ void UGraphBase::RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode)
         ToNode->RemoveEdge(FromNode);
     }
 }
-
+*/
 int32 UGraphBase::GetNumNodes()
 {
     return this->Nodes.Num();
@@ -110,16 +92,7 @@ int32 UGraphBase::GetNumNodes()
 
 int32 UGraphBase::GetNumEdges()
 {
-    int32 NumEdges = 0;
-
-    for (UNodeBase* Node : this->Nodes)
-    {
-        if (!Node) continue;
-
-        NumEdges += Node->GetAdjacencyList().Num();
-    }
-
-    return NumEdges;
+    return this->Edges.Num();
 }
 
 TArray<UNodeBase*> UGraphBase::GetNodes()
@@ -127,6 +100,25 @@ TArray<UNodeBase*> UGraphBase::GetNodes()
     return this->Nodes;
 }
 
+TArray<UEdgeBase*> UGraphBase::GetEdges()
+{
+    return this->Edges;
+}
+
+bool UGraphBase::IsRootNode(UNodeBase* InNode)
+{
+    for (UEdgeBase* Edge : this->Edges)
+    {
+        if (Edge->Source == InNode)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*
 bool UGraphBase::BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode)
 {
     if (!SourceNode)
@@ -218,4 +210,4 @@ bool UGraphBase::BreadthFirstSearchNodes(UNodeBase* SourceNode, TArray<UNodeBase
 
     return false;
 }
-
+*/

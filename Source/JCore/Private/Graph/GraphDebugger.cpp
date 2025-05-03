@@ -82,7 +82,7 @@ void AGraphDebugger::DrawGraph()
     }
 
     TSet<FEdgePair> UniqueEdges;
-
+/*
     // Draw Node locations
     for (UNodeBase* Node : this->Graph->GetNodes())
     {
@@ -119,7 +119,7 @@ void AGraphDebugger::DrawGraph()
 
         DrawDebugSolidBox(GetWorld(), Center, FVector(20.0f, 20.0f, 20.0f), FColor::Blue, false, -1, SDPG_MAX);
     }
-
+*/
     // Draw Edges between Nodes
     for (FEdgePair UniqueEdge: UniqueEdges)
     {

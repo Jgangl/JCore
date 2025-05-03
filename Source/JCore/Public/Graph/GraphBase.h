@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "EdgeBase.h"
 #include "NodeBase.h"
 
 #include "GraphBase.generated.h"
@@ -29,8 +30,8 @@ public:
     UFUNCTION(BlueprintCallable)
     void AddEdge(UNodeBase* FromNode, UNodeBase* ToNode);
 
-    UFUNCTION(BlueprintCallable)
-    void RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode);
+    //UFUNCTION(BlueprintCallable)
+    //void RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode);
 
     UFUNCTION(BlueprintCallable)
     int32 GetNumNodes();
@@ -42,11 +43,16 @@ public:
     TArray<UNodeBase*> GetNodes();
 
     UFUNCTION(BlueprintCallable)
+    TArray<UEdgeBase*> GetEdges();
+
+    bool IsRootNode(UNodeBase* InNode);
+/*
+    UFUNCTION(BlueprintCallable)
     bool BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode);
 
     UFUNCTION(BlueprintCallable)
     bool BreadthFirstSearchNodes(UNodeBase* SourceNode, TArray<UNodeBase*> TargetNodes);
-
+*/
     UPROPERTY(BlueprintAssignable)
     FOnNodeAdded OnNodeAdded;
 
@@ -56,6 +62,9 @@ public:
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     TArray<UNodeBase*> Nodes;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+    TArray<UEdgeBase*> Edges;
 
     UPROPERTY(EditAnywhere)
     bool bIsDirectedGraph;

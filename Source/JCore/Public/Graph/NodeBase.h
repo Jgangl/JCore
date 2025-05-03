@@ -11,18 +11,6 @@ public:
     UNodeBase();
 
     UFUNCTION(BlueprintCallable)
-    void AddConnectedNode(UNodeBase* ConnectedNode);
-
-    UFUNCTION(BlueprintCallable)
-    void RemoveConnectedNode(UNodeBase* DisconnectedNode);
-
-    UFUNCTION(BlueprintCallable)
-    void RemoveEdge(UNodeBase* FromNode);
-
-    UFUNCTION(BlueprintCallable)
-    TArray<UNodeBase*> GetAdjacencyList();
-
-    UFUNCTION(BlueprintCallable)
     void SetLocation(const FVector &InLocation);
 
     UFUNCTION(BlueprintCallable)
@@ -32,9 +20,6 @@ public:
     virtual void PostEdgesAdded();
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    TArray<UNodeBase*> AdjacencyList;
-
     int32 MaxConnections;
 
     UPROPERTY()
