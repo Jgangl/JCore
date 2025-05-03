@@ -157,6 +157,15 @@ public:
     UPROPERTY(EditAnywhere)
     bool bFirstPersonInteraction;
 
+    UPROPERTY(EditAnywhere)
+    bool bInConveyorBuildMode;
+
+    UPROPERTY(EditAnywhere)
+    EBuildModeState ConveyorBuildModeState;
+
+    UPROPERTY(Transient)
+    FVector InitialConveyorBuildLocation;
+
 private:
     float TargetLocationRepTimer;
 

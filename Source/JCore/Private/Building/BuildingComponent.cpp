@@ -9,6 +9,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
+#include "SteamFactory/Conveyor.h"
+
 UBuildingComponent::UBuildingComponent()
 {
     this->PrimaryComponentTick.bCanEverTick = true;
@@ -441,7 +443,37 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         }
     }
 
-    BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
+    if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
+    this->ConveyorBuildModeState == EBuildModeState::None)
+    {
+        this->ConveyorBuildModeState = EBuildModeState::InProcess;
+        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
+
+        // Save initial position to be able to calculate a path from
+        this->InitialConveyorBuildLocation = this->GetGridLocation(BuildableToBuild->GetActorLocation());
+
+        return;
+    }
+    else if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
+             this->ConveyorBuildModeState == EBuildModeState::InProcess)
+    {
+        this->ConveyorBuildModeState = EBuildModeState::None;
+
+        FTransform NewTransform = this->ServerTargetTransform;
+        NewTransform.SetLocation(this->InitialConveyorBuildLocation);
+        BuildableToBuild->SetActorTransform(NewTransform);
+
+        if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
+        {
+            Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, this->GetGridLocation(this->GetClosestGridLocationFromCamera()));
+        }
+
+        this->InitialConveyorBuildLocation = FVector::Zero();
+    }
+    else
+    {
+        BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
+    }
 
     this->ClearBuildingPreview(false);
 

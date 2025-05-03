@@ -13,7 +13,8 @@ public class JCore : ModuleRules
             {
                 "Core",
                 "Engine",
-                "UMG"
+                "UMG",
+                "SteamFactory"
             }
         );
 
