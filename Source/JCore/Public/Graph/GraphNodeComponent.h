@@ -20,6 +20,10 @@ public:
 
     virtual void OnRegister() override;
 
+    virtual void InitializeComponent() override;
+
+    virtual void PostInitProperties() override;
+
     UFUNCTION(BlueprintCallable)
     UNodeBase* GetNode() const;
 

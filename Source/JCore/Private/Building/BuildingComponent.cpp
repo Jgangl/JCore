@@ -225,7 +225,7 @@ void UBuildingComponent::RotateBuildObject(bool bClockwise)
     }
     else
     {
-        DeltaRotation = FRotator(RotationAmount, 0.0f, 0.0f);
+        DeltaRotation = FRotator(0.0f, RotationAmount, 0.0f);
     }
 
     this->BuildingPreviewRotationOffset += DeltaRotation;

@@ -4,6 +4,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "SteamFactory/ConveyorManager.h"
+#include "SteamFactory/ItemConveyorNode.h"
 
 struct FEdgePair
 {
@@ -62,6 +63,7 @@ void AGraphDebugger::Tick(float DeltaSeconds)
     {
         this->DrawGraph();
         this->DrawUpdateOrder();
+        this->DrawItemLocations();
     }
 }
 
@@ -173,6 +175,34 @@ void AGraphDebugger::DrawUpdateOrder()
                 }
             }
         }
+    }
+}
+
+void AGraphDebugger::DrawItemLocations()
+{
+    UItemTransportGraph* ItemTransportGraph = Cast<UItemTransportGraph>(this->Graph);
+
+    if (!ItemTransportGraph) return;
+
+    TArray<FVector> ItemLocations;
+
+    for (UNodeBase* Node : ItemTransportGraph->GetNodes())
+    {
+        UItemConveyorNode* ItemConveyorNode = Cast<UItemConveyorNode>(Node);
+
+        if (ItemConveyorNode)
+        {
+            ItemConveyorNode->GetItemLocations(ItemLocations);
+        }
+    }
+
+    for (const FVector& ItemLoc : ItemLocations)
+    {
+        DrawDebugSphere(GetWorld(),
+                        ItemLoc,
+                        20.0f,
+                        10,
+                        FColor::Turquoise);
     }
 }
 

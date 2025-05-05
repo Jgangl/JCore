@@ -25,6 +25,8 @@ public:
 
     void DrawUpdateOrder();
 
+    void DrawItemLocations();
+
 protected:
     UPROPERTY(EditAnywhere)
     UGraphBase* Graph;
