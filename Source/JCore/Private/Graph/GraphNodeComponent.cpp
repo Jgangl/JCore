@@ -16,11 +16,6 @@ UGraphNodeComponent::UGraphNodeComponent()
 void UGraphNodeComponent::BeginPlay()
 {
     Super::BeginPlay();
-
-    if (this->NodeClass)
-    {
-        this->Node = NewObject<UNodeBase>(this, this->NodeClass);
-    }
 }
 
 void UGraphNodeComponent::OnRegister()
