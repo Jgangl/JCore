@@ -45,7 +45,14 @@ public:
     UFUNCTION(BlueprintCallable)
     TArray<UEdgeBase*> GetEdges();
 
+    UFUNCTION(BlueprintCallable)
+    TArray<UEdgeBase*> GetEdgesFromNode(UNodeBase* InNode);
+
+    UFUNCTION(BlueprintCallable)
     bool IsRootNode(UNodeBase* InNode);
+
+    UFUNCTION(BlueprintCallable)
+    bool IsSourceNode(UNodeBase* InNode);
 /*
     UFUNCTION(BlueprintCallable)
     bool BreadthFirstSearch(UNodeBase* SourceNode, UNodeBase* TargetNode);

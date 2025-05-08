@@ -105,11 +105,47 @@ TArray<UEdgeBase*> UGraphBase::GetEdges()
     return this->Edges;
 }
 
+TArray<UEdgeBase*> UGraphBase::GetEdgesFromNode(UNodeBase* InNode)
+{
+    // This is super inefficient
+    // TODO: Fix
+    TArray<UEdgeBase*> NodeEdges;
+
+    if (!InNode)
+    {
+        return NodeEdges;
+    }
+
+    for (UEdgeBase* Edge : this->Edges)
+    {
+        if (Edge->Source == InNode)
+        {
+            NodeEdges.Add(Edge);
+        }
+    }
+
+    return NodeEdges;
+}
+
 bool UGraphBase::IsRootNode(UNodeBase* InNode)
 {
     for (UEdgeBase* Edge : this->Edges)
     {
         if (Edge->Source == InNode)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool UGraphBase::IsSourceNode(UNodeBase* InNode)
+{
+    // Check if this node has any edges pointing to it
+    for (UEdgeBase* Edge : this->Edges)
+    {
+        if (Edge->Destination == InNode)
         {
             return false;
         }

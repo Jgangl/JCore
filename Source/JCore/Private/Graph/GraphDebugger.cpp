@@ -127,54 +127,25 @@ void AGraphDebugger::DrawUpdateOrder()
         return;
     }
 
+    // Not sure why this is necessary, but without it the debug strings aren't drawn correctly
+    FlushDebugStrings(GetWorld());
+
     UItemTransportGraph* ItemTransportGraph = Cast<UItemTransportGraph>(this->Graph);
 
     if (!ItemTransportGraph) return;
 
-    TArray<UItemTransportNode*> RootNodes = ItemTransportGraph->GetRootNodes();
+    TArray<UItemTransportNode*> TopOrder = ItemTransportGraph->GetTopologicalOrder();
 
-    for (UItemTransportNode* RootNode : RootNodes)
+    for (int i = 0; i < TopOrder.Num(); i++)
     {
-        if (!RootNode) continue;
+        UItemTransportNode* CurrentNode = TopOrder[i];
 
-        // Draw root nodes
-        FVector Center = RootNode->GetLocation() + FVector(0.0f, 0.0f, 200.0f);
-        DrawDebugSolidBox(GetWorld(), Center, FVector(20.0f, 20.0f, 20.0f), FColor::Red, false, -1, SDPG_MAX);
+        if (!CurrentNode) continue;
 
-        TQueue<UItemTransportNode*> UnvisitedNodes;
-        TArray<UItemTransportNode*> VisitedNodes;
+        FVector Loc = CurrentNode->GetLocation() + FVector(0.0f, 0.0f, 150.0f);
 
-        VisitedNodes.Add(RootNode);
-        UnvisitedNodes.Enqueue(RootNode);
-
-        // Not sure why this is necessary, but without it the debug strings aren't drawn correctly
-        FlushDebugStrings(GetWorld());
-
-        int32 CurrentUpdate = 1;
-
-        while (!UnvisitedNodes.IsEmpty())
-        {
-            UItemTransportNode* CurrentNode;
-            UnvisitedNodes.Dequeue(CurrentNode);
-
-            if (!CurrentNode) continue;
-
-            FVector Loc = CurrentNode->GetLocation() + FVector(0.0f, 0.0f, 150.0f);
-
-            // Draw a number;
-            DrawDebugString(GetWorld(), Loc, FString::FromInt(CurrentUpdate), this);
-            CurrentUpdate++;
-
-            for (UItemTransportNode* ChildrenNode : ItemTransportGraph->GetChildrenNodes(CurrentNode))
-            {
-                // Don't visit the same node twice
-                if (!VisitedNodes.Contains(ChildrenNode))
-                {
-                    VisitedNodes.Add(ChildrenNode);
-                    UnvisitedNodes.Enqueue(ChildrenNode);
-                }
-            }
-        }
+        // Draw a number;
+        DrawDebugString(GetWorld(), Loc, FString::FromInt(i), this);
     }
 }
 
