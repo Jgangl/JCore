@@ -28,7 +28,7 @@ public:
     virtual bool RemoveNode(UNodeBase* NodeToRemove);
 
     UFUNCTION(BlueprintCallable)
-    void AddEdge(UNodeBase* FromNode, UNodeBase* ToNode);
+    virtual void AddEdge(UNodeBase* FromNode, UNodeBase* ToNode);
 
     //UFUNCTION(BlueprintCallable)
     //void RemoveEdge(UNodeBase* FromNode, UNodeBase* ToNode);
