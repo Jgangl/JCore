@@ -17,6 +17,12 @@ UBuildingConnectionComponent::UBuildingConnectionComponent()
     this->SetArrowSize(1.5f);
     this->SetArrowLength(30.0f);
 
+    this->SetCollisionEnabled(ECollisionEnabled::Type::QueryOnly);
+
+    this->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
+
+    this->SetGenerateOverlapEvents(true);
+
     this->ConnectedComponent = nullptr;
 
     this->bIsInput = true;

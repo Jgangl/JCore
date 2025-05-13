@@ -3,6 +3,7 @@
 #include "Graph/GraphDebugger.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "SteamFactory/Conveyor.h"
 #include "SteamFactory/ConveyorManager.h"
 #include "SteamFactory/ItemConveyorNode.h"
 
@@ -41,6 +42,8 @@ AGraphDebugger::AGraphDebugger()
 
     this->Graph    = nullptr;
     this->bEnabled = true;
+
+    this->DistanceBetweenSplineDebugSpheres = 100.0f;
 }
 
 void AGraphDebugger::Tick(float DeltaSeconds)
@@ -64,6 +67,7 @@ void AGraphDebugger::Tick(float DeltaSeconds)
         this->DrawGraph();
         this->DrawUpdateOrder();
         this->DrawItemLocations();
+        this->DrawSplineLocations();
     }
 }
 
@@ -173,7 +177,36 @@ void AGraphDebugger::DrawItemLocations()
                         ItemLoc,
                         20.0f,
                         10,
-                        FColor::Turquoise);
+                        FColor::White);
+    }
+}
+
+void AGraphDebugger::DrawSplineLocations()
+{
+    TArray<AActor*> OutActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AConveyor::StaticClass(), OutActors);
+
+    for (AActor* Actor : OutActors)
+    {
+        AConveyor* Conveyor = Cast<AConveyor>(Actor);
+
+        USplineComponent* SplineComponent = Cast<USplineComponent>(Conveyor->GetComponentByClass(USplineComponent::StaticClass()));
+
+        if (SplineComponent)
+        {
+            int32 NumPoints = SplineComponent->GetSplineLength() / this->DistanceBetweenSplineDebugSpheres;
+
+            for (int i = 0; i < NumPoints; i++)
+            {
+                float CurrentDistance = i * this->DistanceBetweenSplineDebugSpheres;
+                FVector Location = SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World);
+                DrawDebugSphere(GetWorld(),
+                                Location,
+                                20.0f,
+                                10,
+                                FColor::White);
+            }
+        }
     }
 }
 

@@ -66,6 +66,8 @@ public:
 
     virtual void GetOpenConnectionComponents(TArray<UBuildingConnectionComponent*>& OutConnectionComponents) const override;
 
+    void AddConnection(UBuildingConnectionComponent* FromConnection, UBuildingConnectionComponent* ToConnection);
+
     virtual void GetConnectionSnapTransforms(TArray<FTransform>& OutSnapTransforms) const override;
 
     virtual UBuildingConnectionComponent* GetClosestConnectionToLocation(const FVector& InLocation) const override;
@@ -101,6 +103,8 @@ protected:
     bool RemoveGraphNode();
 
     void UpdatePreviewing();
+
+    void UpdateGraphConnections();
 
     UFUNCTION()
     virtual void OnConnectionConnected(UBuildingConnectionComponent* FromConnectedConnection,

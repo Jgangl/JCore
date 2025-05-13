@@ -27,10 +27,15 @@ public:
 
     void DrawItemLocations();
 
+    void DrawSplineLocations();
+
 protected:
     UPROPERTY(EditAnywhere)
     UGraphBase* Graph;
 
     UPROPERTY(EditAnywhere)
     bool bEnabled;
+
+    UPROPERTY(EditAnywhere)
+    float DistanceBetweenSplineDebugSpheres;
 };

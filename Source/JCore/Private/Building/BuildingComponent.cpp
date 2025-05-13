@@ -96,13 +96,16 @@ void UBuildingComponent::TickComponent(float DeltaTime,
     {
         TArray<FTransform> StraightConveyorTransforms;
 
+
+        //TArray<FTransform> StraightConveyorTransforms;
+/*
         FVector EndConveyorLocation = this->GetGridLocation(OutHits[0].Location);
 
         if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
         {
             Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, EndConveyorLocation);
         }
-
+*/
         return;
     }
 
@@ -462,13 +465,13 @@ void UBuildingComponent::ServerTryBuild_Implementation()
     }
 
     if (BuildableToBuild->GetSnapType() == EBuildingSnapType::Conveyor &&
-    this->ConveyorBuildModeState == EBuildModeState::None)
+        this->ConveyorBuildModeState == EBuildModeState::None)
     {
         this->ConveyorBuildModeState = EBuildModeState::InProcess;
         BuildableToBuild->SetActorTransform(this->ServerTargetTransform);
 
         // Save initial position to be able to calculate a path from
-        this->InitialConveyorBuildLocation = this->GetGridLocation(BuildableToBuild->GetActorLocation());
+        this->InitialConveyorBuildLocation = BuildableToBuild->GetActorLocation();
 
         return;
     }
