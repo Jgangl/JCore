@@ -44,6 +44,10 @@ AGraphDebugger::AGraphDebugger()
     this->bEnabled = true;
 
     this->DistanceBetweenSplineDebugSpheres = 100.0f;
+
+    this->bDrawUpdateOrder     = true;
+    this->bDrawItemLocations   = true;
+    this->bDrawSplineLocations = true;
 }
 
 void AGraphDebugger::Tick(float DeltaSeconds)
@@ -65,9 +69,21 @@ void AGraphDebugger::Tick(float DeltaSeconds)
     if (this->bEnabled)
     {
         this->DrawGraph();
-        this->DrawUpdateOrder();
-        this->DrawItemLocations();
-        this->DrawSplineLocations();
+
+        if (this->bDrawUpdateOrder)
+        {
+            this->DrawUpdateOrder();
+        }
+
+        if (this->bDrawItemLocations)
+        {
+            this->DrawItemLocations();
+        }
+
+        if (this->bDrawSplineLocations)
+        {
+            this->DrawSplineLocations();
+        }
     }
 }
 

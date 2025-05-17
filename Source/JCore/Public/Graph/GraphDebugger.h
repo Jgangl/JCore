@@ -36,6 +36,16 @@ protected:
     UPROPERTY(EditAnywhere)
     bool bEnabled;
 
+    UPROPERTY(EditAnywhere, meta=(EditCondition="bEnabled"))
+    bool bDrawUpdateOrder;
+
+    UPROPERTY(EditAnywhere, meta=(EditCondition="bEnabled"))
+    bool bDrawItemLocations;
+
+    UPROPERTY(EditAnywhere, meta=(EditCondition="bEnabled"))
+    bool bDrawSplineLocations;
+
+
     UPROPERTY(EditAnywhere)
     float DistanceBetweenSplineDebugSpheres;
 };
