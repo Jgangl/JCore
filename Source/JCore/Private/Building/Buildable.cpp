@@ -286,7 +286,7 @@ void ABuildable::OnConstruction(const FTransform& Transform)
     GetComponents(this->MeshComponents);
     for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
-        if (MeshComponent)
+        if (MeshComponent && !MeshComponent->IsA(UInstancedStaticMeshComponent::StaticClass()))
         {
             this->OriginalMaterials.Add(MeshComponent->GetMaterial(0));
 
@@ -628,7 +628,7 @@ void ABuildable::SetCollisionProfileName(const FName InCollisionProfileName)
 {
     for (UMeshComponent* MeshComponent : this->MeshComponents)
     {
-        if (!MeshComponent) continue;
+        if (!MeshComponent || MeshComponent->IsA(UInstancedStaticMeshComponent::StaticClass())) continue;
 
         MeshComponent->SetCollisionProfileName(InCollisionProfileName);
         // This is necessary for Instanced static mesh components to properly generate their collision
