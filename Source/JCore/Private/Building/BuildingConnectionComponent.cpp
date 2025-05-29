@@ -10,7 +10,7 @@
 
 UBuildingConnectionComponent::UBuildingConnectionComponent()
 {
-    PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bCanEverTick = false;
     this->SetIsReplicatedByDefault(true);
 
     this->SetArrowFColor(FColor::White);

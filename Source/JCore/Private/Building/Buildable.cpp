@@ -19,6 +19,8 @@ ABuildable::ABuildable()
     this->StaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Static Mesh Component"));
     this->SetRootComponent(this->StaticMeshComponent);
 
+    this->StaticMeshComponent->SetMobility(EComponentMobility::Static);
+
     this->bIsPreviewing        = false;
     this->bValidPlacement      = false;
     this->bRequireOverlapCheck = true;
