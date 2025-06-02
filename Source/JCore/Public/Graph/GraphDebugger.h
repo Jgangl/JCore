@@ -18,16 +18,10 @@ public:
 
     virtual void Tick(float DeltaSeconds) override;
 
-    void DrawGraph();
+    virtual void DrawGraph();
 
     UFUNCTION(BlueprintCallable)
     void SetGraph(UGraphBase* InGraph);
-
-    void DrawUpdateOrder();
-
-    void DrawItemLocations();
-
-    void DrawSplineLocations();
 
 protected:
     UPROPERTY(EditAnywhere)
@@ -35,17 +29,4 @@ protected:
 
     UPROPERTY(EditAnywhere)
     bool bEnabled;
-
-    UPROPERTY(EditAnywhere, meta=(EditCondition="bEnabled"))
-    bool bDrawUpdateOrder;
-
-    UPROPERTY(EditAnywhere, meta=(EditCondition="bEnabled"))
-    bool bDrawItemLocations;
-
-    UPROPERTY(EditAnywhere, meta=(EditCondition="bEnabled"))
-    bool bDrawSplineLocations;
-
-
-    UPROPERTY(EditAnywhere)
-    float DistanceBetweenSplineDebugSpheres;
 };

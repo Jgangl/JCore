@@ -9,8 +9,6 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
-#include "SteamFactory/Conveyor.h"
-
 UBuildingComponent::UBuildingComponent()
 {
     this->PrimaryComponentTick.bCanEverTick = true;
@@ -484,10 +482,12 @@ void UBuildingComponent::ServerTryBuild_Implementation()
         NewTransform.SetLocation(this->InitialConveyorBuildLocation);
         BuildableToBuild->SetActorTransform(NewTransform);
 
+        /*
         if (AConveyor* Conveyor = Cast<AConveyor>(this->CurrentBuildingPreview))
         {
             Conveyor->CreateBaseInstances(this->InitialConveyorBuildLocation, this->GetGridLocation(this->GetClosestGridLocationFromCamera()));
         }
+        */
 
         this->InitialConveyorBuildLocation = FVector::Zero();
     }

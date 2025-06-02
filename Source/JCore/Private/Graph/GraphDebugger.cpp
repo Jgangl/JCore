@@ -2,11 +2,6 @@
 
 #include "Graph/GraphDebugger.h"
 
-#include "Kismet/GameplayStatics.h"
-#include "SteamFactory/Conveyor.h"
-#include "SteamFactory/ConveyorManager.h"
-#include "SteamFactory/ItemConveyorNode.h"
-
 struct FEdgePair
 {
     FEdgePair()
@@ -42,48 +37,15 @@ AGraphDebugger::AGraphDebugger()
 
     this->Graph    = nullptr;
     this->bEnabled = true;
-
-    this->DistanceBetweenSplineDebugSpheres = 100.0f;
-
-    this->bDrawUpdateOrder     = true;
-    this->bDrawItemLocations   = true;
-    this->bDrawSplineLocations = true;
 }
 
 void AGraphDebugger::Tick(float DeltaSeconds)
 {
     Super::Tick(DeltaSeconds);
 
-    AConveyorManager* ConveyorManager = Cast<AConveyorManager>(UGameplayStatics::GetActorOfClass(GetWorld(), AConveyorManager::StaticClass()));
-
-    if (!ConveyorManager)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Couldn't find a conveyor manager"));
-        return;
-    }
-
-    UGraphBase* FoundGraph = ConveyorManager->GetGraph();
-
-    this->SetGraph(FoundGraph);
-
     if (this->bEnabled)
     {
         this->DrawGraph();
-
-        if (this->bDrawUpdateOrder)
-        {
-            this->DrawUpdateOrder();
-        }
-
-        if (this->bDrawItemLocations)
-        {
-            this->DrawItemLocations();
-        }
-
-        if (this->bDrawSplineLocations)
-        {
-            this->DrawSplineLocations();
-        }
     }
 }
 
@@ -139,90 +101,3 @@ void AGraphDebugger::SetGraph(UGraphBase* InGraph)
 {
     this->Graph = InGraph;
 }
-
-void AGraphDebugger::DrawUpdateOrder()
-{
-    if (!this->Graph)
-    {
-        return;
-    }
-
-    // Not sure why this is necessary, but without it the debug strings aren't drawn correctly
-    FlushDebugStrings(GetWorld());
-
-    UItemTransportGraph* ItemTransportGraph = Cast<UItemTransportGraph>(this->Graph);
-
-    if (!ItemTransportGraph) return;
-
-    TArray<UItemTransportNode*> TopOrder = ItemTransportGraph->GetTopologicalOrder();
-
-    for (int i = 0; i < TopOrder.Num(); i++)
-    {
-        UItemTransportNode* CurrentNode = TopOrder[i];
-
-        if (!CurrentNode) continue;
-
-        FVector Loc = CurrentNode->GetLocation() + FVector(0.0f, 0.0f, 150.0f);
-
-        // Draw a number;
-        DrawDebugString(GetWorld(), Loc, FString::FromInt(i), this);
-    }
-}
-
-void AGraphDebugger::DrawItemLocations()
-{
-    UItemTransportGraph* ItemTransportGraph = Cast<UItemTransportGraph>(this->Graph);
-
-    if (!ItemTransportGraph) return;
-
-    TArray<FVector> ItemLocations;
-
-    for (UNodeBase* Node : ItemTransportGraph->GetNodes())
-    {
-        UItemConveyorNode* ItemConveyorNode = Cast<UItemConveyorNode>(Node);
-
-        if (ItemConveyorNode)
-        {
-            ItemConveyorNode->GetItemLocations(ItemLocations);
-        }
-    }
-
-    for (const FVector& ItemLoc : ItemLocations)
-    {
-        DrawDebugSphere(GetWorld(),
-                        ItemLoc,
-                        20.0f,
-                        10,
-                        FColor::White);
-    }
-}
-
-void AGraphDebugger::DrawSplineLocations()
-{
-    TArray<AActor*> OutActors;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AConveyor::StaticClass(), OutActors);
-
-    for (AActor* Actor : OutActors)
-    {
-        AConveyor* Conveyor = Cast<AConveyor>(Actor);
-
-        USplineComponent* SplineComponent = Cast<USplineComponent>(Conveyor->GetComponentByClass(USplineComponent::StaticClass()));
-
-        if (SplineComponent)
-        {
-            int32 NumPoints = SplineComponent->GetSplineLength() / this->DistanceBetweenSplineDebugSpheres;
-
-            for (int i = 0; i < NumPoints; i++)
-            {
-                float CurrentDistance = i * this->DistanceBetweenSplineDebugSpheres;
-                FVector Location = SplineComponent->GetLocationAtDistanceAlongSpline(CurrentDistance, ESplineCoordinateSpace::World);
-                DrawDebugSphere(GetWorld(),
-                                Location,
-                                20.0f,
-                                10,
-                                FColor::White);
-            }
-        }
-    }
-}
-
