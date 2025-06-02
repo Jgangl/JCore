@@ -41,7 +41,7 @@ ABuildable::ABuildable()
 
     if (!ValidMaterialFinder.Succeeded())
     {
-        UE_LOG(LogTemp, Error, TEXT("%hs : Path invalid: %s"), __FUNCTION__, *ValidMaterialPath);
+        UE_LOG(LogTemp, Verbose, TEXT("%hs : Path invalid: %s"), __FUNCTION__, *ValidMaterialPath);
     }
 
     this->ValidPreviewMaterial = ValidMaterialFinder.Object;
@@ -50,7 +50,7 @@ ABuildable::ABuildable()
 
     if (!InvalidMaterialFinder.Succeeded())
     {
-        UE_LOG(LogTemp, Error, TEXT("%hs : Path invalid: %s"), __FUNCTION__, *InvalidMaterialPath);
+        UE_LOG(LogTemp, Verbose, TEXT("%hs : Path invalid: %s"), __FUNCTION__, *InvalidMaterialPath);
     }
 
     this->InvalidPreviewMaterial = InvalidMaterialFinder.Object;
@@ -61,6 +61,7 @@ void ABuildable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifeti
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
     DOREPLIFETIME(ABuildable, bIsPreviewing);
+    DOREPLIFETIME(ABuildable, bValidPlacement);
     DOREPLIFETIME_CONDITION(ABuildable, ValidPreviewMaterial, COND_InitialOnly);
     DOREPLIFETIME_CONDITION(ABuildable, InvalidPreviewMaterial, COND_InitialOnly);
 }
