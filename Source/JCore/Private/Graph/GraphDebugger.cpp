@@ -71,6 +71,8 @@ void AGraphDebugger::DrawGraph()
 
     for (UEdgeBase* Edge : this->Graph->GetEdges())
     {
+        if (!Edge || !Edge->Source || +Edge->Destination) continue;
+
         FVector Direction = (Edge->Source->GetLocation() - Edge->Destination->GetLocation());
         Direction.Normalize();
 

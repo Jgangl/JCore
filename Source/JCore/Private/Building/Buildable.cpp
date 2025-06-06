@@ -34,6 +34,8 @@ ABuildable::ABuildable()
 
     this->StaticMeshComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_GameTraceChannel2, ECR_Overlap);
 
+    // TODO: Set the materials with a building manager or something
+/*
     const FString ValidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_ValidBuildingPreview.M_ValidBuildingPreview'");
     const FString InvalidMaterialPath = TEXT("/Script/Engine.Material'/Game/Assets/Materials/M_InvalidBuildingPreview.M_InvalidBuildingPreview'");
 
@@ -54,6 +56,7 @@ ABuildable::ABuildable()
     }
 
     this->InvalidPreviewMaterial = InvalidMaterialFinder.Object;
+    */
 }
 
 void ABuildable::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
