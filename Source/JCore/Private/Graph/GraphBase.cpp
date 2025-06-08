@@ -14,6 +14,8 @@ UNodeBase* UGraphBase::AddNode(UNodeBase* NewNode)
         return nullptr;
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("Num nodes now in graph: %d"), this->Nodes.Num());
+
     this->Nodes.AddUnique(NewNode);
 
     this->OnNodeAdded.Broadcast(NewNode);
