@@ -135,7 +135,7 @@ FBoxSphereBounds UInteractableComponent::GetStaticMeshComponentsBounds()
         return FBoxSphereBounds();
     }
 
-    FBoxSphereBounds MeshComponentsTotalBounds;
+    FBoxSphereBounds MeshComponentsTotalBounds = FBoxSphereBounds();
 
     FVector Origin;
 

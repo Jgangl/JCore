@@ -25,6 +25,7 @@ public:
     UFUNCTION(BlueprintCallable, Category="Utility")
     static const FVector GetClosestLocationToPoint(const FVector         &TargetLocation,
                                                    const TArray<FVector> &InLocations);
+
     /**
      *  Gets a FTransform that is closest to the TargetLocation from the given InTransforms, in world space.
      *

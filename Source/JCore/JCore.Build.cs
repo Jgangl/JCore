@@ -21,6 +21,7 @@ public class JCore : ModuleRules
             new string[]
             {
                 "CoreUObject",
+                "CoreOnline",
                 "Engine",
                 "Slate",
                 "SlateCore"
