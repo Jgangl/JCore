@@ -11,6 +11,7 @@ public class JCore : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
+                "AIModule",
                 "Core",
                 "Engine",
                 "UMG"
@@ -20,6 +21,7 @@ public class JCore : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
+                "AIModule",
                 "CoreUObject",
                 "CoreOnline",
                 "Engine",
