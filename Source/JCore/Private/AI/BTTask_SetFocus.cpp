@@ -2,6 +2,7 @@
 
 #include "AIController.h"
 #include "BehaviorTree/BTFunctionLibrary.h"
+#include "BehaviorTree/Blackboard/BlackboardKeyType_Object.h"
 
 UBTTask_SetFocus::UBTTask_SetFocus(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -27,7 +28,7 @@ EBTNodeResult::Type UBTTask_SetFocus::ExecuteTask(UBehaviorTreeComponent& OwnerC
 
     if (this->FocusType == EFocusType::Actor)
     {
-        AActor* Target = UBTFunctionLibrary::GetBlackboardValueAsActor(this, this->FocusTarget);
+        AActor* Target = Cast<AActor>(BlackboardComp->GetValue<UBlackboardKeyType_Object>(this->FocusTarget.GetSelectedKeyID()));
 
         if (!Target)
         {
